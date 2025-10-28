@@ -2,31 +2,43 @@
 import React, { useState } from 'react';
 import { Spinner } from './Spinner';
 import { TrashIcon } from './icons';
-import type { CoverOptions, ChildImage } from '../types';
+import type { GenerationFormData, ChildImage } from '../types';
+import { storyCharacterRoles } from '../services/geminiService';
+
 
 interface ColoringBookFormProps {
-  onSubmit: (formData: {
-    theme: string;
-    name: string;
-    ageLevel: string;
-    coverOptions: CoverOptions;
-    childImage: ChildImage | null;
-  }) => void;
+  onSubmit: (formData: GenerationFormData) => void;
   isLoading: boolean;
+  mode: 'coloringBook' | 'stickerMaker' | 'storyTeller';
 }
 
-export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, isLoading }) => {
+const defaultPrompts = [
+    'Space Dinosaurs', 'Magical Forest Creatures', 'Underwater Unicorns',
+    'Superhero Pets', 'Robots on Vacation', 'Enchanted Castle Adventure',
+    'Pirate Animals Seeking Treasure', 'Fairies in a Candy Land', 'Friendly Monsters\' Party',
+    'Construction Vehicles Building', 'Alien Zoo Planet', 'A Day at the Dragon Circus',
+    'Jetpack-wearing Farm Animals', 'Gnomes in a Giant\'s Garden', 'Silly Knights and Princesses'
+];
+
+export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, isLoading, mode }) => {
+  // Common state
   const [theme, setTheme] = useState('');
+  const [childImage, setChildImage] = useState<ChildImage | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // Coloring Book state
   const [name, setName] = useState('');
   const [ageLevel, setAgeLevel] = useState('kids');
-  const [coverOptions, setCoverOptions] = useState<CoverOptions>({
-    template: 'illustrated',
-    color: '#8B5CF6', // purple-500
-    font: 'playful',
-    dedication: ''
+  const [coverOptions, setCoverOptions] = useState({
+    template: 'illustrated', color: '#8B5CF6', font: 'playful', dedication: ''
   });
-   const [childImage, setChildImage] = useState<ChildImage | null>(null);
-   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // Story Teller state
+  const [storySelection, setStorySelection] = useState<keyof typeof storyCharacterRoles>('cinderella');
+  const [character1Name, setCharacter1Name] = useState('');
+  const [character2Name, setCharacter2Name] = useState('');
+  const [character3Name, setCharacter3Name] = useState('');
+
 
   const handleCoverOptionsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setCoverOptions(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -43,7 +55,6 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
       };
       reader.readAsDataURL(file);
     }
-     // Reset the input value to allow re-uploading the same file
     e.target.value = '';
   };
 
@@ -58,139 +69,185 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (theme.trim() && name.trim() && !isLoading) {
+    if (isSubmitDisabled) return;
+    
+    if (mode === 'coloringBook') {
       onSubmit({ theme, name, ageLevel, coverOptions, childImage });
+    } else if (mode === 'stickerMaker') {
+      onSubmit({ theme, childImage });
+    } else if (mode === 'storyTeller') {
+        onSubmit({ theme: 'story', childImage: null, storySelection, character1Name, character2Name, character3Name });
     }
   };
+  
+  const isSubmitDisabled = isLoading || (mode !== 'storyTeller' && !theme.trim()) || 
+    (mode === 'coloringBook' && !name.trim()) ||
+    (mode === 'storyTeller' && !character1Name.trim());
+
+  const getButtonText = () => {
+      if (isLoading) return 'Creating...';
+      switch(mode) {
+          case 'coloringBook': return 'Generate My Coloring Book';
+          case 'stickerMaker': return 'Create My Stickers';
+          case 'storyTeller': return 'Write My Story';
+          default: return 'Generate';
+      }
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* --- Main Details --- */}
-      <fieldset>
-        <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Book Details</legend>
-        <div className="space-y-4 pt-2">
-            <div>
-                <label htmlFor="theme" className="block text-sm font-medium text-slate-700 mb-1">
-                Coloring Book Theme
-                </label>
-                <input
-                id="theme"
-                type="text"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                placeholder="e.g., Space Dinosaurs or Magical Forest"
-                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition"
-                required
-                />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* --- Mode-Specific Details --- */}
+      {mode === 'coloringBook' && (
+        <fieldset>
+            <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Book Details</legend>
+            <div className="space-y-4 pt-2">
                 <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-                    Child's Name
-                    </label>
-                    <input
-                    id="name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g., Lily"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition"
-                    required
-                    />
+                    <label htmlFor="theme" className="block text-sm font-medium text-slate-700 mb-1">Coloring Book Theme</label>
+                    <input id="theme" type="text" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="e.g., Space Dinosaurs" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition" required/>
                 </div>
                 <div>
-                    <label htmlFor="age" className="block text-sm font-medium text-slate-700 mb-1">
-                    Age / Skill Level
-                    </label>
-                    <select
-                        id="age"
-                        value={ageLevel}
-                        onChange={(e) => setAgeLevel(e.target.value)}
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white"
-                    >
-                        <option value="preschool">Preschool (2-4)</option>
-                        <option value="kids">Kids (5-7)</option>
-                        <option value="bigkids">Big Kids (8+)</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-      </fieldset>
-      
-      {/* --- Cover Customization --- */}
-      <fieldset>
-         <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Cover Customization</legend>
-          <div className="space-y-4 pt-2">
-            <div>
-                <label htmlFor="template" className="block text-sm font-medium text-slate-700 mb-1">Cover Style</label>
-                <select id="template" name="template" value={coverOptions.template} onChange={handleCoverOptionsChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
-                    <option value="illustrated">Illustrated Storybook</option>
-                    <option value="bold">Bold & Graphic</option>
-                    <option value="soft">Soft & Whimsical</option>
-                </select>
-            </div>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label htmlFor="font" className="block text-sm font-medium text-slate-700 mb-1">Font Style</label>
-                    <select id="font" name="font" value={coverOptions.font} onChange={handleCoverOptionsChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
-                        <option value="playful">Playful</option>
-                        <option value="bold">Bold</option>
-                        <option value="cursive">Cursive</option>
-                    </select>
-                </div>
-                <div>
-                    <label htmlFor="color" className="block text-sm font-medium text-slate-700 mb-1">Title Color</label>
-                    <input type="color" id="color" name="color" value={coverOptions.color} onChange={handleCoverOptionsChange} className="w-full h-10 px-1 py-1 border border-slate-300 rounded-lg" />
-                </div>
-             </div>
-             <div>
-                <label htmlFor="dedication" className="block text-sm font-medium text-slate-700 mb-1">Dedication (Optional)</label>
-                <input id="dedication" name="dedication" type="text" value={coverOptions.dedication} onChange={handleCoverOptionsChange} placeholder="e.g., With love from Grandma" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition" />
-             </div>
-          </div>
-      </fieldset>
-
-       {/* --- Image Upload --- */}
-       <fieldset>
-        <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Personalize with a Photo (Optional)</legend>
-        <div className="pt-2">
-            {imagePreview ? (
-                <div className="flex items-center space-x-4">
-                    <img src={imagePreview} alt="Child preview" className="w-20 h-20 rounded-lg object-cover" />
-                    <div className="text-sm">
-                        <p className="font-medium text-slate-700">Image selected!</p>
-                        <p className="text-slate-500">The AI will redraw this photo in the book.</p>
+                    <p className="text-xs font-medium text-slate-600 mb-2">Need ideas? Try one of these!</p>
+                    <div className="flex flex-wrap gap-2">
+                        {defaultPrompts.map(prompt => (
+                            <button key={prompt} type="button" onClick={() => setTheme(prompt)} className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded-full hover:bg-purple-200 transition-colors">{prompt}</button>
+                        ))}
                     </div>
-                    <button type="button" onClick={removeImage} className="ml-auto text-red-500 hover:text-red-700 p-2 rounded-full bg-red-100 hover:bg-red-200" aria-label="Remove image">
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">Child's Name</label>
+                        <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Lily" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition" required/>
+                    </div>
+                    <div>
+                        <label htmlFor="age" className="block text-sm font-medium text-slate-700 mb-1">Age / Skill Level</label>
+                        <select id="age" value={ageLevel} onChange={(e) => setAgeLevel(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
+                            <option value="preschool">Preschool (2-4)</option>
+                            <option value="kids">Kids (5-7)</option>
+                            <option value="bigkids">Big Kids (8+)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+      )}
+
+      {mode === 'stickerMaker' && (
+        <fieldset>
+            <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Sticker Details</legend>
+            <div className="space-y-4 pt-2">
+                <div>
+                    <label htmlFor="theme" className="block text-sm font-medium text-slate-700 mb-1">Sticker Theme</label>
+                    <input id="theme" type="text" value={theme} onChange={(e) => setTheme(e.target.value)} placeholder="e.g., Happy Avocados" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition" required/>
+                </div>
+                 <div>
+                    <p className="text-xs font-medium text-slate-600 mb-2">Need ideas? Try one of these!</p>
+                    <div className="flex flex-wrap gap-2">
+                        {defaultPrompts.slice(0, 5).map(prompt => (
+                            <button key={prompt} type="button" onClick={() => setTheme(prompt)} className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded-full hover:bg-purple-200 transition-colors">{prompt}</button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+      )}
+
+      {mode === 'storyTeller' && (
+        <fieldset>
+            <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Story Details</legend>
+            <div className="space-y-4 pt-2">
+                <div>
+                    <label htmlFor="storySelection" className="block text-sm font-medium text-slate-700 mb-1">Choose a Classic Story</label>
+                    <select id="storySelection" value={storySelection} onChange={(e) => setStorySelection(e.target.value as keyof typeof storyCharacterRoles)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
+                        <option value="cinderella">Cinderella</option>
+                        <option value="snow_white">Snow White</option>
+                        <option value="jack_beanstalk">Jack and the Beanstalk</option>
+                    </select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <div>
+                        <label htmlFor="character1Name" className="block text-sm font-medium text-slate-700 mb-1">Main Character's Name</label>
+                        <input id="character1Name" type="text" value={character1Name} onChange={(e) => setCharacter1Name(e.target.value)} placeholder={storyCharacterRoles[storySelection].originalChar1} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition" required/>
+                    </div>
+                     <div>
+                        <label htmlFor="character2Name" className="block text-sm font-medium text-slate-700 mb-1">Second Character (Optional)</label>
+                        <input id="character2Name" type="text" value={character2Name} onChange={(e) => setCharacter2Name(e.target.value)} placeholder={storyCharacterRoles[storySelection].originalChar2} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition"/>
+                    </div>
+                </div>
+                 <div>
+                    <label htmlFor="character3Name" className="block text-sm font-medium text-slate-700 mb-1">{storyCharacterRoles[storySelection].char3Role} (Optional)</label>
+                    <input id="character3Name" type="text" value={character3Name} onChange={(e) => setCharacter3Name(e.target.value)} placeholder={storyCharacterRoles[storySelection].originalChar3} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition"/>
+                </div>
+            </div>
+        </fieldset>
+      )}
+
+      {/* --- Common Details --- */}
+      {(mode === 'coloringBook' || mode === 'stickerMaker') && (
+        <fieldset>
+            <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Personalize (Optional)</legend>
+            <div className="space-y-4 pt-2">
+                <p className="text-sm text-slate-600">Upload a photo to have the AI draw a character based on your child!</p>
+                {imagePreview ? (
+                <div className="relative group w-32 h-32 mx-auto">
+                    <img src={imagePreview} alt="Child preview" className="w-32 h-32 rounded-lg object-cover shadow-md" />
+                    <button type="button" onClick={removeImage} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <TrashIcon />
                     </button>
                 </div>
-            ) : (
-                <div className="w-full h-24 border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center text-center">
-                    <label htmlFor="file-upload" className="cursor-pointer text-purple-600 hover:text-purple-800 font-semibold">
-                       <span>Upload a photo</span>
-                       <p className="text-xs text-slate-500">to add your child into the book!</p>
-                       <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/png, image/jpeg" />
+                ) : (
+                <div>
+                    <label htmlFor="file-upload" className="cursor-pointer w-full flex justify-center px-4 py-6 border-2 border-slate-300 border-dashed rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition">
+                        <span>Click to upload a photo</span>
                     </label>
+                    <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} accept="image/png, image/jpeg" />
                 </div>
-            )}
-        </div>
-       </fieldset>
+                )}
+            </div>
+        </fieldset>
+      )}
 
-      <button
-        type="submit"
-        disabled={isLoading || !theme.trim() || !name.trim()}
-        className="w-full flex justify-center items-center bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:from-purple-600 hover:to-pink-600 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? (
-          <>
-            <Spinner />
-            <span className="ml-2">Creating...</span>
-          </>
-        ) : (
-          'Generate My Coloring Book'
-        )}
-      </button>
+      {mode === 'coloringBook' && (
+         <fieldset>
+            <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Cover Customization</legend>
+            <div className="space-y-4 pt-2">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <div>
+                        <label htmlFor="template" className="block text-sm font-medium text-slate-700 mb-1">Cover Template</label>
+                        <select name="template" id="template" value={coverOptions.template} onChange={handleCoverOptionsChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
+                            <option value="illustrated">Illustrated</option>
+                            <option value="bold">Bold & Graphic</option>
+                            <option value="soft">Soft & Whimsical</option>
+                        </select>
+                    </div>
+                     <div>
+                        <label htmlFor="font" className="block text-sm font-medium text-slate-700 mb-1">Font Style</label>
+                        <select name="font" id="font" value={coverOptions.font} onChange={handleCoverOptionsChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
+                            <option value="playful">Playful</option>
+                            <option value="bold">Bold</option>
+                            <option value="cursive">Cursive</option>
+                        </select>
+                    </div>
+                 </div>
+                 <div>
+                    <label htmlFor="color" className="block text-sm font-medium text-slate-700 mb-1">Title Color</label>
+                    <input type="color" name="color" id="color" value={coverOptions.color} onChange={handleCoverOptionsChange} className="w-full h-10 p-1 border border-slate-300 rounded-lg cursor-pointer" />
+                 </div>
+                 <div>
+                    <label htmlFor="dedication" className="block text-sm font-medium text-slate-700 mb-1">Dedication (Optional)</label>
+                    <input type="text" name="dedication" id="dedication" value={coverOptions.dedication} onChange={handleCoverOptionsChange} placeholder="e.g., With love from Grandma" className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition" />
+                 </div>
+            </div>
+        </fieldset>
+      )}
+
+
+      {/* --- Submit Button --- */}
+      <div className="pt-4">
+        <button type="submit" disabled={isSubmitDisabled} className="w-full flex justify-center items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+          {isLoading && <Spinner className="h-5 w-5" />}
+          {getButtonText()}
+        </button>
+      </div>
     </form>
   );
 };

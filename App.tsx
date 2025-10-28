@@ -3,53 +3,113 @@ import React, { useState, useCallback } from 'react';
 import { ColoringBookForm } from './components/ColoringBookForm';
 import { ImageGrid } from './components/ImageGrid';
 import { Spinner } from './components/Spinner';
-import { generateColoringBookImages } from './services/geminiService';
-import { createColoringBookPdf } from './services/pdfService';
+import { generateColoringBookImages, generateStickers, generatePersonalizedStory } from './services/geminiService';
+import { createColoringBookPdf, createStickerSheetPdf, createStickersZip, createStoryPdf } from './services/pdfService';
 import { Chatbot } from './components/Chatbot';
 import { ChatIcon } from './components/icons';
-import type { GeneratedImages, CoverOptions, ChildImage } from './types';
+import type { GeneratedImages, GenerationFormData } from './types';
+
+type Mode = 'coloringBook' | 'stickerMaker' | 'storyTeller';
 
 const App: React.FC = () => {
+  const [mode, setMode] = useState<Mode>('coloringBook');
+  // Coloring Book State
   const [generatedImages, setGeneratedImages] = useState<GeneratedImages | null>(null);
+  const [coloringBookPdfUrl, setColoringBookPdfUrl] = useState<string | null>(null);
+  // Sticker Maker State
+  const [stickerImages, setStickerImages] = useState<string[] | null>(null);
+  const [stickerPdfUrl, setStickerPdfUrl] = useState<string | null>(null);
+  const [isZipLoading, setIsZipLoading] = useState<boolean>(false);
+  // Story Teller State
+  const [storyText, setStoryText] = useState<string | null>(null);
+  const [storyPdfUrl, setStoryPdfUrl] = useState<string | null>(null);
+  // General State
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
-  const [email, setEmail] = useState('');
-  const [emailMessage, setEmailMessage] = useState<string | null>(null);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  const [progress, setProgress] = useState<number>(0);
 
-  const handleGenerate = useCallback(async (formData: { 
-    theme: string; 
-    name: string; 
-    ageLevel: string;
-    coverOptions: CoverOptions;
-    childImage: ChildImage | null;
-  }) => {
+  const handleGenerate = useCallback(async (formData: GenerationFormData) => {
     setIsLoading(true);
     setError(null);
-    setGeneratedImages(null);
-    setPdfUrl(null);
-    setEmailMessage(null);
-    setEmail('');
+    resetState(true); // Soft reset
+    setLoadingMessage('Warming up the AI...');
+    setProgress(0);
 
     try {
-      const { theme, name, ageLevel, coverOptions, childImage } = formData;
-      const images = await generateColoringBookImages(theme, name, ageLevel, coverOptions, childImage);
-      setGeneratedImages(images);
-
-      const url = await createColoringBookPdf(images.coverImage, images.pages, theme, name);
-      setPdfUrl(url);
+      if (mode === 'coloringBook' && formData.name && formData.ageLevel && formData.coverOptions) {
+        const { theme, name, ageLevel, coverOptions, childImage } = formData;
+        const images = await generateColoringBookImages(
+          theme, name, ageLevel, coverOptions, childImage, 
+          (message, percent) => { setLoadingMessage(message); setProgress(percent); }
+        );
+        setGeneratedImages(images);
+        const url = await createColoringBookPdf(images.coverImage, images.pages, theme, name);
+        setColoringBookPdfUrl(url);
+      } else if (mode === 'stickerMaker') {
+        const { theme, childImage } = formData;
+        const stickers = await generateStickers(
+          theme, childImage,
+          (message, percent) => { setLoadingMessage(message); setProgress(percent); }
+        );
+        setStickerImages(stickers);
+        const pdfUrl = await createStickerSheetPdf(stickers);
+        setStickerPdfUrl(pdfUrl);
+      } else if (mode === 'storyTeller' && formData.storySelection && formData.character1Name) {
+         setLoadingMessage('Weaving a magical tale...');
+         setProgress(33);
+         const { storySelection, character1Name, character2Name, character3Name } = formData;
+         const story = await generatePersonalizedStory(storySelection, character1Name, character2Name || '', character3Name || '');
+         setStoryText(story);
+         setProgress(66);
+         setLoadingMessage('Formatting your beautiful storybook...');
+         const storyPdf = await createStoryPdf(story, storySelection, { character1Name, character2Name, character3Name });
+         setStoryPdfUrl(storyPdf);
+         setProgress(100);
+         setLoadingMessage('Your story is ready!');
+      }
     } catch (e) {
       console.error(e);
-      setError('Failed to generate coloring book. Please try again.');
+      setError(`Failed to generate ${mode.replace(/([A-Z])/g, ' $1')}. Please try again.`);
     } finally {
       setIsLoading(false);
+      setLoadingMessage('');
+      // Don't reset progress to 0 immediately to show completion
     }
-  }, []);
+  }, [mode]);
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setEmailMessage("For your security, browsers can't send files directly. Please download the PDF and attach it to your email.");
+  const resetState = (keepProgress = false) => {
+    setGeneratedImages(null);
+    setColoringBookPdfUrl(null);
+    setStickerImages(null);
+    setStickerPdfUrl(null);
+    setStoryText(null);
+    setStoryPdfUrl(null);
+    setError(null);
+    if (!keepProgress) {
+        setProgress(0);
+    }
+  }
+
+  const handleModeChange = (newMode: Mode) => {
+    if (newMode !== mode) {
+        setMode(newMode);
+        resetState();
+    }
+  }
+
+  const handleDownloadZip = async () => {
+    if (!stickerImages) return;
+    setIsZipLoading(true);
+    try {
+      await createStickersZip(stickerImages);
+    } catch(e) {
+      console.error("Failed to create ZIP", e);
+      setError("Could not create ZIP file.");
+    } finally {
+      setIsZipLoading(false);
+    }
   };
 
   return (
@@ -57,21 +117,51 @@ const App: React.FC = () => {
       <main className="container mx-auto px-4 py-8 md:py-12">
         <header className="text-center mb-8 md:mb-12">
           <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
-            AI Coloring Book Generator
+            AI Creative Studio
           </h1>
           <p className="mt-2 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
-            Create a magical, personalized coloring book for your child in seconds.
+            Create magical coloring books, vibrant stickers, or personalized stories in seconds.
           </p>
         </header>
 
-        <div className="max-w-2xl mx-auto bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8">
-          <ColoringBookForm onSubmit={handleGenerate} isLoading={isLoading} />
+        <div className="max-w-2xl mx-auto">
+          {/* Mode Tabs */}
+          <div className="flex justify-center border-b-2 border-slate-200 mb-8">
+            <button 
+              onClick={() => handleModeChange('coloringBook')}
+              className={`px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg transition-colors duration-300 ${mode === 'coloringBook' ? 'text-purple-600 border-b-4 border-purple-500' : 'text-slate-500 hover:text-purple-500'}`}
+            >
+              Coloring Book
+            </button>
+            <button 
+              onClick={() => handleModeChange('stickerMaker')}
+              className={`px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg transition-colors duration-300 ${mode === 'stickerMaker' ? 'text-purple-600 border-b-4 border-purple-500' : 'text-slate-500 hover:text-purple-500'}`}
+            >
+              Sticker Maker
+            </button>
+            <button 
+              onClick={() => handleModeChange('storyTeller')}
+              className={`px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg transition-colors duration-300 ${mode === 'storyTeller' ? 'text-purple-600 border-b-4 border-purple-500' : 'text-slate-500 hover:text-purple-500'}`}
+            >
+              Story Teller
+            </button>
+          </div>
+        
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8">
+            <ColoringBookForm onSubmit={handleGenerate} isLoading={isLoading} mode={mode} />
+          </div>
         </div>
 
         {isLoading && (
-          <div className="text-center mt-12">
-            <Spinner />
-            <p className="mt-4 text-slate-600 animate-pulse">Generating your magical coloring book... this can take a minute!</p>
+          <div className="text-center mt-12 flex flex-col items-center justify-center">
+            <Spinner className="h-10 w-10 text-purple-500" />
+            <p className="mt-4 text-slate-600">{loadingMessage}</p>
+            <div className="w-full max-w-md bg-slate-200 rounded-full h-2.5 mt-4 overflow-hidden">
+                <div 
+                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full transition-all duration-500 ease-linear" 
+                    style={{ width: `${progress}%` }}
+                ></div>
+            </div>
           </div>
         )}
 
@@ -82,13 +172,13 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {generatedImages && (
+        {mode === 'coloringBook' && generatedImages && (
           <div className="mt-12">
              <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-slate-700">Your Coloring Book is Ready!</h2>
-                {pdfUrl && (
+                {coloringBookPdfUrl && (
                     <a
-                        href={pdfUrl}
+                        href={coloringBookPdfUrl}
                         download={`Coloring-Book-${generatedImages.name.replace(/\s+/g, '-')}.pdf`}
                         className="mt-4 inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
                     >
@@ -96,36 +186,60 @@ const App: React.FC = () => {
                     </a>
                 )}
             </div>
-
-            {pdfUrl && (
-              <div className="max-w-xl mx-auto mt-8 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-semibold text-slate-700 mb-4 text-center">Share via Email</h3>
-                <form onSubmit={handleEmailSubmit} className="space-y-4">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter recipient's email"
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:from-purple-600 hover:to-pink-600 transition-all duration-300"
-                  >
-                    Send Email
-                  </button>
-                </form>
-                {emailMessage && (
-                  <div className="mt-4 text-center text-sm text-blue-700 bg-blue-100 border border-blue-300 rounded-lg p-3">
-                    {emailMessage}
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="mt-12">
-              <ImageGrid coverImage={generatedImages.coverImage} pages={generatedImages.pages} />
+              <ImageGrid mode="coloringBook" coverImage={generatedImages.coverImage} pages={generatedImages.pages} />
+            </div>
+          </div>
+        )}
+
+        {mode === 'stickerMaker' && stickerImages && (
+          <div className="mt-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-slate-700">Your Stickers are Ready!</h2>
+                <div className="flex flex-wrap justify-center gap-4 mt-4">
+                  {stickerPdfUrl && (
+                      <a
+                          href={stickerPdfUrl}
+                          download="Sticker-Sheet.pdf"
+                          className="inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
+                      >
+                          Download Sticker Sheet (PDF)
+                      </a>
+                  )}
+                  <button
+                    onClick={handleDownloadZip}
+                    disabled={isZipLoading}
+                    className="inline-block bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out disabled:opacity-50"
+                  >
+                    {isZipLoading ? 'Zipping...' : 'Download All as ZIP'}
+                  </button>
+              </div>
+            </div>
+            <div className="mt-12">
+              <ImageGrid mode="stickerMaker" stickers={stickerImages} />
+            </div>
+          </div>
+        )}
+        
+        {mode === 'storyTeller' && storyText && (
+          <div className="mt-12 max-w-2xl mx-auto">
+             <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-slate-700">Your Personalized Storybook is Ready!</h2>
+                 <div className="flex flex-wrap justify-center gap-4 mt-4">
+                    {storyPdfUrl && (
+                        <a
+                            href={storyPdfUrl}
+                            download="My-Personalized-Story.pdf"
+                            className="inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
+                        >
+                            Download Story PDF
+                        </a>
+                    )}
+                 </div>
+            </div>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 whitespace-pre-wrap font-serif text-base leading-relaxed text-slate-700 max-h-[40vh] overflow-y-auto border">
+              <h3 className="text-xl font-bold font-sans mb-4 text-center">Story Preview</h3>
+              <p>{storyText.substring(0, 400)}...</p>
             </div>
           </div>
         )}
