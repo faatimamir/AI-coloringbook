@@ -1,3 +1,7 @@
+// FIX: Define a specific `StoryName` type for story selections to ensure type safety.
+// This was previously `string`, which caused a type mismatch error when
+// calling the story generation service in `App.tsx`.
+export type StoryName = 'cinderella' | 'snow_white' | 'jack_beanstalk';
 
 export interface GeneratedImages {
   coverImage: string;
@@ -23,6 +27,18 @@ export interface ChildImage {
   mimeType: string;
 }
 
+export interface StorybookContent {
+  text: string;
+  illustrations: string[];
+  coverImage: string;
+  title: string;
+  characters: { 
+    character1Name: string;
+    character2Name?: string;
+    character3Name?: string;
+  };
+}
+
 // Data passed from the form can vary depending on the mode
 export interface GenerationFormData {
   theme: string;
@@ -32,8 +48,9 @@ export interface GenerationFormData {
   ageLevel?: string;
   coverOptions?: CoverOptions;
   // Story Teller specific
-  storySelection?: string;
+  storySelection?: StoryName;
   character1Name?: string;
   character2Name?: string;
   character3Name?: string;
+  storybookMode?: 'classic' | 'personalized';
 }

@@ -3,11 +3,11 @@ import React, { useState, useCallback } from 'react';
 import { ColoringBookForm } from './components/ColoringBookForm';
 import { ImageGrid } from './components/ImageGrid';
 import { Spinner } from './components/Spinner';
-import { generateColoringBookImages, generateStickers, generatePersonalizedStory } from './services/geminiService';
+import { generateColoringBookImages, generateStickers, generatePersonalizedStorybook } from './services/geminiService';
 import { createColoringBookPdf, createStickerSheetPdf, createStickersZip, createStoryPdf } from './services/pdfService';
 import { Chatbot } from './components/Chatbot';
 import { ChatIcon } from './components/icons';
-import type { GeneratedImages, GenerationFormData } from './types';
+import type { GeneratedImages, GenerationFormData, StorybookContent } from './types';
 
 type Mode = 'coloringBook' | 'stickerMaker' | 'storyTeller';
 
@@ -21,7 +21,7 @@ const App: React.FC = () => {
   const [stickerPdfUrl, setStickerPdfUrl] = useState<string | null>(null);
   const [isZipLoading, setIsZipLoading] = useState<boolean>(false);
   // Story Teller State
-  const [storyText, setStoryText] = useState<string | null>(null);
+  const [storybookContent, setStorybookContent] = useState<StorybookContent | null>(null);
   const [storyPdfUrl, setStoryPdfUrl] = useState<string | null>(null);
   // General State
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -56,18 +56,23 @@ const App: React.FC = () => {
         setStickerImages(stickers);
         const pdfUrl = await createStickerSheetPdf(stickers);
         setStickerPdfUrl(pdfUrl);
-      } else if (mode === 'storyTeller' && formData.storySelection && formData.character1Name) {
-         setLoadingMessage('Weaving a magical tale...');
-         setProgress(33);
-         const { storySelection, character1Name, character2Name, character3Name } = formData;
-         const story = await generatePersonalizedStory(storySelection, character1Name, character2Name || '', character3Name || '');
-         setStoryText(story);
-         setProgress(66);
+      } else if (mode === 'storyTeller' && formData.storySelection && formData.character1Name && formData.storybookMode) {
+         const { storySelection, character1Name, character2Name, character3Name, storybookMode, childImage } = formData;
+         const storybook = await generatePersonalizedStorybook(
+            storySelection, 
+            character1Name, 
+            character2Name || '', 
+            character3Name || '',
+            storybookMode,
+            childImage,
+            (message, percent) => { setLoadingMessage(message); setProgress(percent); }
+        );
+         setStorybookContent(storybook);
          setLoadingMessage('Formatting your beautiful storybook...');
-         const storyPdf = await createStoryPdf(story, storySelection, { character1Name, character2Name, character3Name });
+         const storyPdf = await createStoryPdf(storybook);
          setStoryPdfUrl(storyPdf);
          setProgress(100);
-         setLoadingMessage('Your story is ready!');
+         setLoadingMessage('Your storybook is ready!');
       }
     } catch (e) {
       console.error(e);
@@ -84,7 +89,7 @@ const App: React.FC = () => {
     setColoringBookPdfUrl(null);
     setStickerImages(null);
     setStickerPdfUrl(null);
-    setStoryText(null);
+    setStorybookContent(null);
     setStoryPdfUrl(null);
     setError(null);
     if (!keepProgress) {
@@ -221,7 +226,7 @@ const App: React.FC = () => {
           </div>
         )}
         
-        {mode === 'storyTeller' && storyText && (
+        {mode === 'storyTeller' && storybookContent && (
           <div className="mt-12 max-w-2xl mx-auto">
              <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-slate-700">Your Personalized Storybook is Ready!</h2>
@@ -229,17 +234,17 @@ const App: React.FC = () => {
                     {storyPdfUrl && (
                         <a
                             href={storyPdfUrl}
-                            download="My-Personalized-Story.pdf"
+                            download={`${storybookContent.title.replace(/\s+/g, '-')}-for-${storybookContent.characters.character1Name}.pdf`}
                             className="inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
                         >
-                            Download Story PDF
+                            Download Storybook PDF
                         </a>
                     )}
                  </div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 whitespace-pre-wrap font-serif text-base leading-relaxed text-slate-700 max-h-[40vh] overflow-y-auto border">
-              <h3 className="text-xl font-bold font-sans mb-4 text-center">Story Preview</h3>
-              <p>{storyText.substring(0, 400)}...</p>
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 border aspect-[8.5/11]">
+              <h3 className="text-xl font-bold font-sans mb-4 text-center">Storybook Cover Preview</h3>
+              <img src={storybookContent.coverImage} alt="Storybook cover preview" className="w-full h-auto rounded-lg shadow-md object-contain" />
             </div>
           </div>
         )}

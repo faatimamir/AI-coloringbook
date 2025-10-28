@@ -38,6 +38,7 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
   const [character1Name, setCharacter1Name] = useState('');
   const [character2Name, setCharacter2Name] = useState('');
   const [character3Name, setCharacter3Name] = useState('');
+  const [storybookMode, setStorybookMode] = useState<'classic' | 'personalized'>('classic');
 
 
   const handleCoverOptionsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -76,7 +77,7 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
     } else if (mode === 'stickerMaker') {
       onSubmit({ theme, childImage });
     } else if (mode === 'storyTeller') {
-        onSubmit({ theme: 'story', childImage: null, storySelection, character1Name, character2Name, character3Name });
+        onSubmit({ theme: 'story', childImage, storySelection, character1Name, character2Name, character3Name, storybookMode });
     }
   };
   
@@ -156,6 +157,18 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
             <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Story Details</legend>
             <div className="space-y-4 pt-2">
                 <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Story Mode</label>
+                  <div className="flex rounded-lg border border-slate-300 p-0.5 w-full">
+                    <button type="button" onClick={() => setStorybookMode('classic')} className={`w-1/2 py-2 text-sm rounded-md transition-colors ${storybookMode === 'classic' ? 'bg-purple-500 text-white' : 'hover:bg-slate-100'}`}>
+                      Classic (Fast)
+                    </button>
+                    <button type="button" onClick={() => setStorybookMode('personalized')} className={`w-1/2 py-2 text-sm rounded-md transition-colors ${storybookMode === 'personalized' ? 'bg-purple-500 text-white' : 'hover:bg-slate-100'}`}>
+                      Personalized AI
+                    </button>
+                  </div>
+                   <p className="text-xs text-slate-500 mt-1 text-center">{storybookMode === 'classic' ? 'Uses beautiful pre-made illustrations.' : 'Generates unique new illustrations with AI.'}</p>
+                </div>
+                <div>
                     <label htmlFor="storySelection" className="block text-sm font-medium text-slate-700 mb-1">Choose a Classic Story</label>
                     <select id="storySelection" value={storySelection} onChange={(e) => setStorySelection(e.target.value as keyof typeof storyCharacterRoles)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
                         <option value="cinderella">Cinderella</option>
@@ -182,7 +195,7 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
       )}
 
       {/* --- Common Details --- */}
-      {(mode === 'coloringBook' || mode === 'stickerMaker') && (
+      {(mode === 'coloringBook' || mode === 'stickerMaker' || (mode === 'storyTeller' && storybookMode === 'personalized')) && (
         <fieldset>
             <legend className="text-lg font-semibold text-slate-800 mb-2 border-b pb-2">Personalize (Optional)</legend>
             <div className="space-y-4 pt-2">

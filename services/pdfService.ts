@@ -1,4 +1,6 @@
 
+import type { StorybookContent } from '../types';
+
 // This assumes jsPDF is loaded from a CDN and available on the window object.
 declare const jspdf: any;
 // This assumes JSZip is loaded from a CDN and available on the window object.
@@ -76,18 +78,14 @@ export const createStickerSheetPdf = async (
 export const createStickersZip = async (stickers: string[]): Promise<void> => {
     const zip = new JSZip();
     
-    // Asynchronously fetch and add each sticker to the zip
     const promises = stickers.map(async (stickerDataUrl, index) => {
-        // Fetch the base64 data as a blob
         const response = await fetch(stickerDataUrl);
         const blob = await response.blob();
         zip.file(`sticker-${index + 1}.png`, blob);
     });
     
-    // Wait for all files to be added
     await Promise.all(promises);
     
-    // Generate the zip file and trigger download
     const content = await zip.generateAsync({ type: 'blob' });
     const url = URL.createObjectURL(content);
     const a = document.createElement('a');
@@ -99,10 +97,9 @@ export const createStickersZip = async (stickers: string[]): Promise<void> => {
     URL.revokeObjectURL(url);
 };
 
+
 export const createStoryPdf = async (
-    storyText: string,
-    storySelection: string,
-    characters: { character1Name: string; character2Name?: string, character3Name?: string }
+    storybook: StorybookContent
 ): Promise<string> => {
     return new Promise((resolve) => {
         const { jsPDF } = jspdf;
@@ -111,52 +108,73 @@ export const createStoryPdf = async (
         const pageWidth = 8.5;
         const pageHeight = 11;
         const maxWidth = pageWidth - (margin * 2);
-        const storyTitles: {[key:string]: string} = {
-            cinderella: 'Cinderella',
-            snow_white: 'Snow White',
-            jack_beanstalk: 'Jack and the Beanstalk'
-        }
-
-        const addPageDecorations = () => {
-            doc.setDrawColor(200, 200, 255); // A light purple
-            doc.setLineWidth(0.02);
-            doc.rect(margin / 2, margin / 2, pageWidth - margin, pageHeight - margin);
-        };
         
-        // --- Title Page ---
-        addPageDecorations();
+        // --- Cover Page ---
+        doc.addImage(storybook.coverImage, 'PNG', 0, 0, pageWidth, pageHeight);
         doc.setFont('times', 'bold');
-        doc.setFontSize(32);
-        doc.setTextColor(88, 86, 214); // A nice purple
-        doc.text(storyTitles[storySelection] || 'A Magical Story', pageWidth / 2, 4, { align: 'center' });
+        doc.setFontSize(36);
+        doc.setTextColor(255, 255, 255);
+        // Add a subtle shadow/outline to make text readable on any image
+        doc.text(storybook.title, pageWidth / 2, 4, { align: 'center' }, null, null, { textShadow: '2px 2px 5px black' });
         
         doc.setFont('times', 'normal');
-        doc.setFontSize(16);
-        doc.setTextColor(100, 100, 100);
-        let starringText = `Starring ${characters.character1Name}`;
-        if (characters.character2Name) starringText += ` and ${characters.character2Name}`;
-        if (characters.character3Name) starringText += ` with ${characters.character3Name}`;
-        doc.text(starringText, pageWidth / 2, 5, { align: 'center' });
-        
+        doc.setFontSize(18);
+        let starringText = `Starring ${storybook.characters.character1Name}`;
+        if (storybook.characters.character2Name) starringText += ` and ${storybook.characters.character2Name}`;
+        doc.text(starringText, pageWidth / 2, 4.8, { align: 'center' });
+
         // --- Story Pages ---
-        doc.addPage();
-        addPageDecorations();
-        doc.setFont('times', 'normal');
-        doc.setFontSize(12);
-        doc.setTextColor(30, 30, 30);
+        const paragraphs = storybook.text.split('\n\n');
+        const illustrations = [...storybook.illustrations];
+        // Distribute illustrations throughout the story
+        const illustrationPlacement = [1, 3, 5]; 
 
-        const lines = doc.splitTextToSize(storyText, maxWidth);
         let cursorY = margin;
-        const lineHeight = 1.2 * (12 / 72); // 1.2 line spacing for 12pt font
+        const lineHeight = 1.4 * (12 / 72);
+        
+        const addNewPage = () => {
+            doc.addPage();
+            doc.setFillColor(253, 245, 230); // Parchment color: #FDF5E6
+            doc.rect(0, 0, pageWidth, pageHeight, 'F');
+            cursorY = margin;
+        };
 
-        lines.forEach((line: string) => {
-            if (cursorY + lineHeight > pageHeight - margin) {
-                doc.addPage();
-                addPageDecorations();
-                cursorY = margin;
+        addNewPage(); // Start with the first story page
+
+        paragraphs.forEach((paragraph, index) => {
+            doc.setFont('times', 'normal');
+            doc.setFontSize(12);
+            doc.setTextColor(30, 30, 30);
+            
+            const lines = doc.splitTextToSize(paragraph, maxWidth);
+            
+            // Check if the whole paragraph fits
+            if (cursorY + (lines.length * lineHeight) > pageHeight - margin) {
+                addNewPage();
             }
-            doc.text(line, margin, cursorY);
-            cursorY += lineHeight;
+
+            lines.forEach((line: string) => {
+                doc.text(line, margin, cursorY);
+                cursorY += lineHeight;
+            });
+            
+            cursorY += lineHeight; // Add extra space after paragraph
+
+            // Check if we should place an illustration here
+            if (illustrationPlacement.includes(index) && illustrations.length > 0) {
+                const imgData = illustrations.shift();
+                const imgHeight = 3.5; // Illustrations will be 3.5 inches tall
+                cursorY += 0.25; // Space before image
+                
+                if (cursorY + imgHeight > pageHeight - margin) {
+                    addNewPage();
+                }
+                
+                if (imgData) {
+                    doc.addImage(imgData, 'PNG', margin, cursorY, maxWidth, imgHeight);
+                    cursorY += imgHeight + 0.25; // Space after image
+                }
+            }
         });
 
         const pdfBlob = doc.output('blob');
