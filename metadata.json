@@ -1,0 +1,5 @@
+{
+  "name": "AI Coloring Book & Chat",
+  "description": "Generate a personalized, multi-page coloring book for children based on any theme. Includes a friendly AI chatbot to answer questions.",
+  "requestFramePermissions": []
+}
