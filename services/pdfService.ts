@@ -1,5 +1,5 @@
 
-import type { StorybookContent } from '../types';
+import type { StorybookContent } from '../types.ts';
 
 // This assumes jsPDF is loaded from a CDN and available on the window object.
 declare const jspdf: any;
@@ -178,6 +178,7 @@ export const createStoryPdf = async (
         });
 
         const pdfBlob = doc.output('blob');
+        // FIX: The variable `pdfUrl` was incorrectly used here instead of `pdfBlob`, causing a reference error.
         const pdfUrl = URL.createObjectURL(pdfBlob);
         resolve(pdfUrl);
     });

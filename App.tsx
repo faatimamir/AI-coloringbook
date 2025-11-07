@@ -1,13 +1,12 @@
 
 import React, { useState, useCallback } from 'react';
-import { ColoringBookForm } from './components/ColoringBookForm';
-import { ImageGrid } from './components/ImageGrid';
-import { Spinner } from './components/Spinner';
-import { generateColoringBookImages, generateStickers, generatePersonalizedStorybook } from './services/geminiService';
-import { createColoringBookPdf, createStickerSheetPdf, createStickersZip, createStoryPdf } from './services/pdfService';
-import { Chatbot } from './components/Chatbot';
-import { ChatIcon } from './components/icons';
-import type { GeneratedImages, GenerationFormData, StorybookContent } from './types';
+import { ColoringBookForm } from './components/ColoringBookForm.tsx';
+import { ImageGrid } from './components/ImageGrid.tsx';
+import { Spinner } from './components/Spinner.tsx';
+import { createColoringBookPdf, createStickerSheetPdf, createStickersZip, createStoryPdf } from './services/pdfService.ts';
+import { Chatbot } from './components/Chatbot.tsx';
+import { ChatIcon } from './components/icons.tsx';
+import type { GeneratedImages, GenerationFormData, StorybookContent } from './types.ts';
 
 type Mode = 'coloringBook' | 'stickerMaker' | 'storyTeller';
 
@@ -31,6 +30,12 @@ const App: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
 
   const handleGenerate = useCallback(async (formData: GenerationFormData) => {
+    // Gracefully handle missing API key
+    if (!process.env.API_KEY) {
+        setError("Configuration Error: The API_KEY is missing. Please set it in your Vercel deployment settings.");
+        return;
+    }
+
     setIsLoading(true);
     setError(null);
     resetState(true); // Soft reset
@@ -38,6 +43,9 @@ const App: React.FC = () => {
     setProgress(0);
 
     try {
+      // Dynamically import the Gemini service to avoid crashing on load if API key is missing
+      const { generateColoringBookImages, generateStickers, generatePersonalizedStorybook } = await import('./services/geminiService.ts');
+
       if (mode === 'coloringBook' && formData.name && formData.ageLevel && formData.coverOptions) {
         const { theme, name, ageLevel, coverOptions, childImage } = formData;
         const images = await generateColoringBookImages(
@@ -76,7 +84,7 @@ const App: React.FC = () => {
       }
     } catch (e) {
       console.error(e);
-      setError(`Failed to generate ${mode.replace(/([A-Z])/g, ' $1')}. Please try again.`);
+      setError(`Failed to generate ${mode.replace(/([A-Z])/g, ' $1')}. Please try again. Error: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setIsLoading(false);
       setLoadingMessage('');
@@ -116,6 +124,23 @@ const App: React.FC = () => {
       setIsZipLoading(false);
     }
   };
+  
+  // Render an error message if API key is not set
+  if (!process.env.API_KEY && !isLoading && !error) {
+     return (
+        <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
+            <div className="text-center p-8 bg-white shadow-2xl rounded-2xl max-w-lg border-2 border-red-200">
+                <h1 className="text-3xl font-bold text-red-600 mb-4">Configuration Error</h1>
+                <p className="text-slate-700 text-lg">
+                    The AI Creative Studio requires an API key to function.
+                </p>
+                <p className="mt-2 text-slate-600">
+                    Please make sure the <code className="bg-red-100 text-red-800 px-2 py-1 rounded">API_KEY</code> environment variable is set correctly in your Vercel deployment settings.
+                </p>
+            </div>
+        </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 font-sans text-slate-800">

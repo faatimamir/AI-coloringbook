@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
-import { Spinner } from './Spinner';
-import { TrashIcon } from './icons';
-import type { GenerationFormData, ChildImage } from '../types';
-import { storyCharacterRoles } from '../services/geminiService';
+import { Spinner } from './Spinner.tsx';
+import { TrashIcon } from './icons.tsx';
+import type { GenerationFormData, ChildImage } from '../types.ts';
+import { storyCharacterRoles } from '../services/storyData.ts';
 
 
 interface ColoringBookFormProps {

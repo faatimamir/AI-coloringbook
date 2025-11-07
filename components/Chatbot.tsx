@@ -1,9 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { Chat } from '@google/genai';
-import { startChat, sendMessageToBot } from '../services/geminiService';
-import type { ChatMessage } from '../types';
-import { CloseIcon, SendIcon } from './icons';
+import type { ChatMessage } from '../types.ts';
+import { CloseIcon, SendIcon } from './icons.tsx';
 
 interface ChatbotProps {
   isOpen: boolean;
@@ -16,16 +15,35 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [initError, setInitError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      const chatInstance = startChat();
-      setChat(chatInstance);
-      setMessages([{ role: 'model', text: 'Hello! How can I help you today?' }]);
-    } else {
-      setMessages([]);
-      setUserInput('');
-    }
+    const initializeChat = async () => {
+        if (isOpen) {
+            if (!process.env.API_KEY) {
+                setInitError("Chat is unavailable: API Key is not configured.");
+                setMessages([{ role: 'model', text: 'Sorry, the AI Assistant is currently unavailable due to a configuration issue.' }]);
+                return;
+            }
+            try {
+                const { startChat } = await import('../services/geminiService.ts');
+                const chatInstance = startChat();
+                setChat(chatInstance);
+                setMessages([{ role: 'model', text: 'Hello! How can I help you today?' }]);
+                setInitError(null);
+            } catch (e) {
+                 console.error("Failed to initialize chat", e);
+                 setInitError("Could not connect to the AI Assistant.");
+                 setMessages([{ role: 'model', text: 'Sorry, I\'m having trouble connecting right now.' }]);
+            }
+        } else {
+            setMessages([]);
+            setUserInput('');
+            setChat(null);
+            setInitError(null);
+        }
+    };
+    initializeChat();
   }, [isOpen]);
 
   const scrollToBottom = () => {
@@ -36,7 +54,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userInput.trim() || !chat || isLoading) return;
+    if (!userInput.trim() || !chat || isLoading || initError) return;
 
     const userMessage: ChatMessage = { role: 'user', text: userInput };
     setMessages((prev) => [...prev, userMessage]);
@@ -44,6 +62,7 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
     setIsLoading(true);
 
     try {
+      const { sendMessageToBot } = await import('../services/geminiService.ts');
       const response = await sendMessageToBot(chat, userInput);
       const modelMessage: ChatMessage = { role: 'model', text: response };
       setMessages((prev) => [...prev, modelMessage]);
@@ -97,11 +116,11 @@ export const Chatbot: React.FC<ChatbotProps> = ({ isOpen, onClose }) => {
             type="text"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            placeholder="Ask anything..."
+            placeholder={initError ? "AI Assistant is unavailable" : "Ask anything..."}
             className="flex-1 px-4 py-2 border border-slate-300 rounded-full focus:ring-purple-500 focus:border-purple-500 transition"
-            disabled={isLoading}
+            disabled={isLoading || !!initError}
           />
-          <button type="submit" className="bg-purple-500 text-white p-2.5 rounded-full hover:bg-purple-600 disabled:bg-purple-300 transition-colors" disabled={isLoading || !userInput.trim()}>
+          <button type="submit" className="bg-purple-500 text-white p-2.5 rounded-full hover:bg-purple-600 disabled:bg-purple-300 transition-colors" disabled={isLoading || !userInput.trim() || !!initError}>
             <SendIcon />
           </button>
         </form>
