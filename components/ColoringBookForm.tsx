@@ -44,6 +44,13 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
   const handleCoverOptionsChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setCoverOptions(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
+  
+  const handleStoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStorySelection(e.target.value as keyof typeof storyCharacterRoles);
+    setCharacter1Name('');
+    setCharacter2Name('');
+    setCharacter3Name('');
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -170,10 +177,13 @@ export const ColoringBookForm: React.FC<ColoringBookFormProps> = ({ onSubmit, is
                 </div>
                 <div>
                     <label htmlFor="storySelection" className="block text-sm font-medium text-slate-700 mb-1">Choose a Classic Story</label>
-                    <select id="storySelection" value={storySelection} onChange={(e) => setStorySelection(e.target.value as keyof typeof storyCharacterRoles)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
+                    <select id="storySelection" value={storySelection} onChange={handleStoryChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 transition bg-white">
                         <option value="cinderella">Cinderella</option>
                         <option value="snow_white">Snow White</option>
                         <option value="jack_beanstalk">Jack and the Beanstalk</option>
+                        <option value="three_pigs">The Three Little Pigs</option>
+                        <option value="goldilocks">Goldilocks &amp; the Three Bears</option>
+                        <option value="red_riding_hood">Little Red Riding Hood</option>
                     </select>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

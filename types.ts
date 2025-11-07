@@ -1,7 +1,7 @@
 // FIX: Define a specific `StoryName` type for story selections to ensure type safety.
 // This was previously `string`, which caused a type mismatch error when
 // calling the story generation service in `App.tsx`.
-export type StoryName = 'cinderella' | 'snow_white' | 'jack_beanstalk';
+export type StoryName = 'cinderella' | 'snow_white' | 'jack_beanstalk' | 'three_pigs' | 'goldilocks' | 'red_riding_hood';
 
 export interface GeneratedImages {
   coverImage: string;

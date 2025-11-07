@@ -1,6 +1,5 @@
-
 import { GoogleGenAI, Chat, Modality } from "@google/genai";
-import type { GeneratedImages, CoverOptions, ChildImage, StorybookContent } from '../types';
+import type { GeneratedImages, CoverOptions, ChildImage, StorybookContent, StoryName } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set");
@@ -31,9 +30,12 @@ const generateImage = async (prompt: string, isIllustration: boolean = false): P
                         outputMimeType: 'image/png',
                     },
                 });
-                const base64ImageBytes = response.generatedImages[0].image.imageBytes;
-                console.log(`Successfully generated image with ${modelName}`);
-                return `data:image/png;base64,${base64ImageBytes}`;
+                if (response.generatedImages && response.generatedImages.length > 0) {
+                    const base64ImageBytes = response.generatedImages[0].image.imageBytes;
+                    console.log(`Successfully generated image with ${modelName}`);
+                    return `data:image/png;base64,${base64ImageBytes}`;
+                }
+                throw new Error(`Model ${modelName} did not return image data.`);
             } else if (modelName === 'gemini-2.5-flash-image') {
                 const response = await ai.models.generateContent({
                     model: modelName,
@@ -45,11 +47,14 @@ const generateImage = async (prompt: string, isIllustration: boolean = false): P
                     },
                 });
 
-                for (const part of response.candidates[0].content.parts) {
-                    if (part.inlineData) {
-                        const base64ImageBytes: string = part.inlineData.data;
-                        console.log(`Successfully generated image with fallback model ${modelName}`);
-                        return `data:image/png;base64,${base64ImageBytes}`;
+                const parts = response.candidates?.[0]?.content?.parts;
+                if (parts) {
+                    for (const part of parts) {
+                        if (part.inlineData) {
+                            const base64ImageBytes: string = part.inlineData.data;
+                            console.log(`Successfully generated image with fallback model ${modelName}`);
+                            return `data:image/png;base64,${base64ImageBytes}`;
+                        }
                     }
                 }
                 throw new Error(`Model ${modelName} did not return image data.`);
@@ -82,10 +87,13 @@ const generateImageWithImage = async (prompt: string, image: ChildImage, isIllus
         },
     });
 
-    for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-            const base64ImageBytes: string = part.inlineData.data;
-            return `data:image/png;base64,${base64ImageBytes}`;
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (parts) {
+        for (const part of parts) {
+            if (part.inlineData) {
+                const base64ImageBytes: string = part.inlineData.data;
+                return `data:image/png;base64,${base64ImageBytes}`;
+            }
         }
     }
     throw new Error("No image generated from gemini-2.5-flash-image");
@@ -162,217 +170,203 @@ export const generateColoringBookImages = async (
     onProgress: (message: string, progress: number) => void
 ): Promise<GeneratedImages> => {
     const prompts = getColoringBookPrompts(theme, name, ageLevel, coverOptions, !!childImage);
-    
-    const allPrompts = [
-        { prompt: prompts.cover, isPersonalized: false, type: 'Cover' },
-        ...prompts.pages.map((p, i) => ({
-            prompt: p,
-            isPersonalized: !!childImage && (i === 0 || i === 7),
-            type: `Page ${i + 1}`
-        }))
-    ];
-    
-    const totalImages = allPrompts.length;
-    const generatedImagesData: string[] = [];
-    const RATE_LIMIT_CHUNK_SIZE = 2;
-    const RATE_LIMIT_WAIT_SECONDS = 60;
+    const totalImages = prompts.pages.length + 1; // +1 for the cover
+    let completedImages = 0;
 
-    for (let i = 0; i < totalImages; i++) {
-        if (i > 0 && i % RATE_LIMIT_CHUNK_SIZE === 0) {
-            const progress = (i / totalImages) * 100;
-            await waitWithProgress(RATE_LIMIT_WAIT_SECONDS, onProgress, progress);
-        }
-        
-        const currentTask = allPrompts[i];
-        const progress = (i / totalImages) * 100;
-        onProgress(`Generating ${currentTask.type} (${i + 1}/${totalImages})...`, progress);
+    const updateProgress = (message: string) => {
+        completedImages++;
+        const percent = Math.round((completedImages / totalImages) * 100);
+        onProgress(message, percent > 99 ? 99 : percent); // Cap at 99 until fully done
+    };
 
-        let imageUrl: string;
-        if (currentTask.isPersonalized && childImage) {
-            imageUrl = await generateImageWithImage(currentTask.prompt, childImage);
+    onProgress('Generating spectacular cover image...', 0);
+    const coverImage = await generateImage(prompts.cover, true); // Cover is an illustration
+    updateProgress('Generating personalized character page...');
+
+    const pages: string[] = [];
+
+    for (let i = 0; i < prompts.pages.length; i++) {
+        const prompt = prompts.pages[i];
+        let pageImage: string;
+
+        // The first and last pages are special and can use the child's image
+        const canUseChildImage = childImage && (i === 0 || i === prompts.pages.length - 1);
+
+        if (canUseChildImage) {
+            pageImage = await generateImageWithImage(prompt, childImage as ChildImage);
         } else {
-            imageUrl = await generateImage(currentTask.prompt, false);
+            pageImage = await generateImage(prompt);
         }
-        generatedImagesData.push(imageUrl);
-    }
-    
-    onProgress('Finishing up...', 99);
 
-    const coverImage = generatedImagesData.shift() || '';
-    
+        pages.push(pageImage);
+
+        // Update progress with a descriptive message
+        const pageDescriptions = [
+            "Crafting a fun scene...",
+            "Designing an amazing maze...",
+            "Connecting the dots...",
+            "Hiding treasure...",
+            "Tracing your name...",
+            "Creating a cool pattern...",
+            "Making your coloring award..."
+        ];
+        const nextMessage = pageDescriptions[i] || `Generating page ${i + 2}...`;
+        updateProgress(nextMessage);
+
+        // Pause between image generations to avoid hitting rate limits
+        if (i < prompts.pages.length - 1) {
+            await waitWithProgress(2, onProgress, Math.round((completedImages / totalImages) * 100));
+        }
+    }
+
+    onProgress('Almost there...', 99);
+
     return {
-        coverImage: coverImage,
-        pages: generatedImagesData,
+        coverImage,
+        pages,
         theme,
-        name
+        name,
     };
 };
 
+// --- Sticker Maker Service ---
 
-// --- Sticker Service ---
 export const generateStickers = async (
     theme: string,
     childImage: ChildImage | null,
     onProgress: (message: string, progress: number) => void
 ): Promise<string[]> => {
-    const STICKER_COUNT = 6;
-    const stickerPrompts: { prompt: string; isPersonalized: boolean }[] = [];
-    const baseStyle = "a vibrant, colorful, die-cut sticker with a thick white border, cartoon style, white background, high quality.";
+    onProgress('Brainstorming sticker ideas...', 0);
+    
+    const stickerCount = 9;
+    
+    const stickerStyle = `cute die-cut sticker, white background, thick vinyl border, cartoon style, vibrant colors, no text, simple illustration. The subject is a character or object related to "${theme}".`;
 
-    if (childImage) {
-        // Create a mix of personalized and general stickers
-        stickerPrompts.push({
-            prompt: `Create a cute cartoon character sticker based on the person in the photo. It is crucial to preserve their exact facial features and likeness. The character's outfit should relate to the theme of "${theme}". ${baseStyle}`,
-            isPersonalized: true
-        });
-        stickerPrompts.push({
-            prompt: `A cute sticker of an animal related to the theme "${theme}". ${baseStyle}`,
-            isPersonalized: false
-        });
-        stickerPrompts.push({
-            prompt: `Create a fun cartoon sticker of the person in the photo waving happily. Accurately capture their exact likeness, facial features, and expression. Their outfit should match the theme "${theme}". ${baseStyle}`,
-            isPersonalized: true
-        });
-        stickerPrompts.push({
-            prompt: `A cute sticker of a food item related to the theme "${theme}". ${baseStyle}`,
-            isPersonalized: false
-        });
-         stickerPrompts.push({
-            prompt: `A fun sticker of an object from the theme "${theme}". ${baseStyle}`,
-            isPersonalized: false
-        });
-        stickerPrompts.push({
-            prompt: `Create a funny cartoon sticker of the person in the photo making a silly face. It is essential to preserve their exact likeness. Surround them with small doodles from the theme "${theme}". ${baseStyle}`,
-            isPersonalized: true
-        });
-    } else {
-        // Generate a variety of general stickers
-        for (let i = 0; i < STICKER_COUNT; i++) {
-            stickerPrompts.push({
-                prompt: `A cute, fun sticker of a character or object related to the theme "${theme}". Sticker ${i + 1} of ${STICKER_COUNT}. ${baseStyle}`,
-                isPersonalized: false
-            });
-        }
-    }
+    const basePrompt = `Generate a variety of ${stickerCount} distinct sticker ideas based on the theme "${theme}". Describe each one very briefly in a numbered list. For example: 1. A smiling planet Saturn. 2. A happy rocket ship.`;
 
-    const generatedStickers: string[] = [];
-    for (let i = 0; i < STICKER_COUNT; i++) {
-        const progress = (i / STICKER_COUNT) * 100;
-        onProgress(`Generating Sticker ${i + 1} of ${STICKER_COUNT}...`, progress);
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: basePrompt,
+    });
+
+    const stickerIdeasText = response.text;
+    const stickerIdeas = stickerIdeasText.split('\n').map(idea => idea.replace(/^\d+\.\s*/, '').trim()).filter(idea => idea.length > 0);
+
+    onProgress('Bringing sticker ideas to life...', 20);
+
+    const imagePromises: Promise<string>[] = [];
+    const totalProgressSteps = stickerCount + 1; // 1 for idea generation
+
+    for (let i = 0; i < stickerCount; i++) {
+        const idea = stickerIdeas[i] || `A cute character from "${theme}"`;
+        const prompt = `${idea}. ${stickerStyle}`;
         
-        const currentTask = stickerPrompts[i];
-        let imageUrl: string;
-        if (currentTask.isPersonalized && childImage) {
-            imageUrl = await generateImageWithImage(currentTask.prompt, childImage, true);
-        } else {
-            imageUrl = await generateImage(currentTask.prompt, true);
-        }
-        generatedStickers.push(imageUrl);
+        const promise = (childImage ? generateImageWithImage(prompt, childImage) : generateImage(prompt))
+            .then(result => {
+                const percent = Math.round(((i + 2) / totalProgressSteps) * 100);
+                onProgress(`Creating sticker ${i + 1} of ${stickerCount}...`, percent);
+                return result;
+            });
+        
+        imagePromises.push(promise);
     }
     
-    onProgress('All done!', 100);
-    return generatedStickers;
+    const stickerImages = await Promise.all(imagePromises);
+    onProgress('Your stickers are ready!', 100);
+    return stickerImages;
 };
 
-
-// --- Chat Service ---
-export const startChat = (): Chat => {
-    return ai.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-            systemInstruction: 'You are Colory, the friendly robot helper from the magical world of coloring! Your job is to chat with kids and their parents and make them smile. Be super friendly, cheerful, and use simple, happy words. If they ask how the coloring book is made, you can say something like: "My grown-up friends use a little bit of computer magic to draw special pictures just for you! You tell them a theme, like \'space dinosaurs,\' and your name, and poof! They create a whole book you can print and color!"',
-        },
-    });
-};
-
-export const sendMessageToBot = async (chat: Chat, message: string): Promise<string> => {
-    const response = await chat.sendMessage({ message });
-    return response.text;
-};
 
 // --- Story Teller Service ---
+
 export const storyCharacterRoles = {
-    cinderella: { titleTemplate: '%CHAR1%', originalChar1: 'Cinderella', originalChar2: 'The Prince', originalChar3: 'The Fairy Godmother', char3Role: 'The Magical Helper' },
-    snow_white: { titleTemplate: '%CHAR1%', originalChar1: 'Snow White', originalChar2: 'The Prince', originalChar3: 'The Evil Queen', char3Role: 'The Jealous Stepmother' },
-    jack_beanstalk: { titleTemplate: '%CHAR1% and the Beanstalk', originalChar1: 'Jack', originalChar2: 'The Giant', originalChar3: "Jack's Mother", char3Role: 'The Worried Parent' },
+  cinderella: {
+    originalChar1: 'Cinderella',
+    originalChar2: 'The Prince',
+    char3Role: 'Fairy Godmother',
+    originalChar3: 'Fairy Godmother'
+  },
+  snow_white: {
+    originalChar1: 'Snow White',
+    originalChar2: 'The Prince',
+    char3Role: 'Evil Queen',
+    originalChar3: 'The Queen'
+  },
+  jack_beanstalk: {
+    originalChar1: 'Jack',
+    originalChar2: 'The Giant',
+    char3Role: 'Jack\'s Mother',
+    originalChar3: 'Jack\'s Mother'
+  },
+  three_pigs: {
+    originalChar1: 'The Smart Pig',
+    originalChar2: 'The Big Bad Wolf',
+    char3Role: 'The Other Two Pigs',
+    originalChar3: 'His Two Siblings'
+  },
+  goldilocks: {
+    originalChar1: 'Goldilocks',
+    originalChar2: 'Papa Bear',
+    char3Role: 'Mama & Baby Bear',
+    originalChar3: 'The Rest of the Family'
+  },
+  red_riding_hood: {
+    originalChar1: 'Little Red Riding Hood',
+    originalChar2: 'The Big Bad Wolf',
+    char3Role: 'The Woodsman',
+    originalChar3: 'The Woodsman'
+  }
 };
 
-const preMadeIllustrations: { [key: string]: { cover: string; illustrations: string[] } } = {
-    cinderella: {
-        cover: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdj+P///38ACfsD/QVDRcoAAAAASUVORK5CYII=', // Placeholder: Dark Grey
-        illustrations: [
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdj/P//PwMACPwC/ohfBuAAAAAASUVORK5CYII=', // Red
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGBg+A8AAQQBAHAgZ7MAAAAASUVORK5CYII=', // Green
-            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAA1JREFUGFdjYGD4/x8AAwAB/6lcTQAAAABJRU5ErkJggg=='  // Blue
-        ]
-    }
-    // Other stories could be added here
-};
-
-
-// FIX: By removing the explicit type here, TypeScript can correctly infer the object keys.
-// The previous explicit type `{[key: string]: ...}` caused `keyof typeof storyTemplates`
-// to be inferred as `string | number`, which caused a type error when passed to a
-// function expecting only a `string`.
-const storyTemplates = {
-    cinderella: {
-        text: `In a kingdom of green hills and sparkling rivers, there lived a gentle and kind-hearted girl named Cinderella... [Full story text]`, // NOTE: Text truncated for brevity
-        illustrationPrompts: (char1: string, char2: string) => [
-            `${char1} in her magical ball gown, arriving at the palace.`,
-            `${char1} dancing with the handsome ${char2} at the royal ball. The ballroom is grand and sparkling.`,
-            `The ${char2} placing the glass slipper on ${char1}'s foot. Her stepmother and stepsisters look on in shock.`
-        ]
-    },
-    snow_white: {
-        text: `Once upon a time, in the heart of a kingdom... [Full story text]`,
-        illustrationPrompts: (char1: string, char2: string) => [
-            `${char1} lost in the dark forest, with friendly animals peering from behind the trees.`,
-            `${char1} meeting the seven dwarfs for the first time in their cozy cottage.`,
-            `The ${char2} waking ${char1} from her deep sleep with a gentle kiss.`
-        ]
-    },
-    jack_beanstalk: {
-        text: `In a small, weathered cottage at the edge of a village... [Full story text]`,
-        illustrationPrompts: (char1: string, char2: string) => [
-            `${char1} climbing the enormous, magical beanstalk that reaches high into the clouds.`,
-            `${char1} hiding from the fearsome, towering ${char2} in the castle in the sky.`,
-            `${char1} chopping down the beanstalk with an axe as the ${char2} begins to climb down.`
-        ]
-    },
-};
-
-// Populate the full text for brevity
-storyTemplates.cinderella.text = `In a kingdom of green hills and sparkling rivers, there lived a gentle and kind-hearted girl named Cinderella. Her spirit was as bright as the morning sun, though her life was often filled with shadows. She lived in a large house with her stepmother and two stepsisters, who were not kind at all. They treated Cinderella not as family, but as a servant, making her cook, clean, and mend their clothes from dawn until dusk. Despite their cruelty, Cinderella remained hopeful, often dreaming of a life filled with warmth and happiness.\n\nOne bright afternoon, a royal messenger arrived with a proclamation. The King was holding a magnificent royal ball in honor of the Prince, and every eligible maiden in the kingdom was invited. Cinderella's stepsisters were ecstatic, chattering endlessly about the gowns they would wear and the dances they would have. Cinderella's heart fluttered with a secret wish to attend, but her stepmother just laughed. "You, at the ball? In your rags? Impossible!" she declared, giving Cinderella an impossibly long list of chores to complete.\n\nAs her stepsisters and stepmother departed for the ball in a flurry of silk and perfume, Cinderella sat by the hearth, her dreams turning to dust. A single tear traced a path through the soot on her cheek. Suddenly, the room filled with a soft, shimmering light. Before her stood a woman with a kind smile and a silver wand—it was the Fairy Godmother! "Don't you worry, my dear," she said gently. "You shall go to the ball."\n\nWith a series of magical flicks of her wand, the Fairy Godmother transformed a plump pumpkin into a grand, golden carriage. Four little mice became four noble white horses, and a friendly rat became a stately coachman. For the final touch, she tapped Cinderella's tattered dress, which dissolved into a breathtaking ball gown of starlight and moonbeams, with delicate glass slippers on her feet. "There is one rule," the Fairy Godmother warned. "You must leave the ball before the clock strikes midnight, for then the spell will end."\n\nCinderella arrived at the palace, and every head turned. No one recognized the lovely girl from the cinders. The Prince himself was instantly enchanted. He asked her to dance, and for the rest of the evening, he had eyes for no one else. They danced and laughed, and for a few precious hours, Cinderella felt like she was living in her most beautiful dream. But as the grand clock began to chime for midnight, she remembered the warning. She hurried from the ballroom, leaving the Prince calling after her. In her haste, one of her glass slippers fell off on the palace steps.\n\nThe Prince, holding the tiny glass slipper, was heartbroken but determined. He vowed to find the mysterious maiden who had captured his heart. He and his royal court traveled the kingdom, having every woman try on the slipper. It fit none of them. Finally, they arrived at Cinderella's house. The stepsisters tried desperately to squeeze their feet into the delicate shoe, but it was no use. Just as the royal party was about to leave, the captain of the guard noticed Cinderella sitting quietly in the corner. Though her stepmother protested, the slipper was brought to her. It slid onto her foot perfectly. At that moment, the Prince knew he had found his true love. Cinderella was brought to the palace, where she and the Prince were married in a grand ceremony, and they lived together in joy and kindness, happily ever after.`;
-storyTemplates.snow_white.text = `Once upon a time, in the heart of a kingdom blessed with snowy winters and sunny summers, lived a princess so fair that her skin was as white as snow, her lips as red as blood, and her hair as black as ebony. Her name was Snow White, and her gentle nature made her beloved by all... except for one. Her stepmother, the Evil Queen, was a woman of stunning beauty, but her heart was cold and filled with vanity. Every day, she would consult her magic mirror, asking, "Magic mirror on the wall, who is the fairest one of all?" And every day, the mirror would reply, "You, my Queen, are fairest of all."\n\nBut as Snow White grew, so did her beauty. One day, the Queen asked her mirror the same question, but this time, the answer was different. "My Queen, you are fair, it's true. But Snow White is a thousand times fairer than you." Consumed by a furious jealousy, the Evil Queen could no longer bear the sight of Snow White. She secretly summoned a huntsman and commanded him to take the princess deep into the woods and end her life, bringing back her heart as proof.\n\nThe huntsman, however, was a good man. When he looked upon Snow White's innocent face, he found he could not harm her. "Run away, child!" he urged her. "Flee into the forest and never return!" Terrified, Snow White ran as fast as she could, deeper and deeper into the dark woods. She ran until her legs could carry her no more, finally collapsing in a small, sunlit clearing. There, she found a charming little cottage, built for someone of a very small size.\n\nHesitantly, she knocked. When no one answered, she crept inside and found a cozy room with seven small beds, seven small chairs, and a table set for seven. Exhausted, she tidied up the little house and then fell fast asleep across three of the tiny beds. That evening, the owners of the cottage returned from their work in the mines. They were seven dwarfs, each with a long beard and a kind heart. They were surprised to find the lovely princess asleep in their home, but when she awoke and told them her sad story, they took pity on her and invited her to stay with them, promising to keep her safe.\n\nMeanwhile, back at the castle, the Evil Queen once again consulted her mirror. To her horror, the mirror revealed, "Over the seven jeweled hills, beyond the seventh fall, in the cottage of the seven dwarfs, Snow White is fairest of all." Realizing she had been tricked, the Queen used her dark magic to disguise herself as an old, stooped peddler woman. She crafted a beautiful, shiny apple, perfect on one side but poisoned with a sleeping curse on the other. She journeyed to the dwarfs' cottage and offered the apple to Snow White as a gift. Wary at first, Snow White took a bite after the old woman took a bite from the safe side. Instantly, the poison took hold, and she fell to the floor in a sleep so deep it was like death.\n\nWhen the dwarfs returned, they were devastated. They could not revive their beloved Snow White. Unwilling to bury her in the cold ground, they built a beautiful coffin of glass and gold and placed her inside, keeping watch over her day and night. A long time passed, and one day, a noble Prince from a neighboring kingdom was riding through the forest. He saw the glass coffin and was struck by the beauty of the sleeping princess. He begged the dwarfs to let him take her back to his castle. As his servants lifted the coffin to carry it away, one of them stumbled. The jolt dislodged the piece of poisoned apple from Snow White's throat, and she awoke, blinking in the sunlight. The spell was broken. The Prince was overjoyed and asked Snow White to be his bride. They were married and ruled their kingdom with kindness and grace, living happily ever after.`;
-storyTemplates.jack_beanstalk.text = `In a small, weathered cottage at the edge of a village lived a young boy named Jack and his dear Mother. They had fallen on hard times, and their pantry grew emptier with each passing day. Their only remaining possession of value was their gentle milk cow, Milky-White. One morning, with a heavy heart, Jack's Mother told him, "Jack, we have no choice. You must take Milky-White to the market and sell her so we can buy food."\n\nJack was a good-natured boy, though a bit of a dreamer. He set off on the road to the market, leading Milky-White by a rope. Along the way, he met a strange little man with a twinkle in his eye and a long, grey beard. The man saw the cow and offered Jack a trade. "I will give you these," he said, opening his palm to reveal five colorful, shimmering beans. "These are no ordinary beans, my boy. They are magic!" Jack, forgetting all about the market and the money, was so intrigued by the idea of magic that he made the trade immediately.\n\nWhen he returned home with only a handful of beans, Jack's Mother was overcome with despair and anger. "You foolish boy!" she cried. "You've traded our only hope for a few worthless beans!" In her frustration, she threw the beans out the cottage window and sent Jack to bed without any supper. The next morning, Jack awoke to a strange sight. Outside his window, where the beans had landed, a colossal beanstalk had sprung up, its thick, green stalk twisting up through the clouds and disappearing from sight.\n\nFilled with a sense of wonder and adventure, Jack decided to climb the enormous plant. He climbed for hours, past birds and clouds, until he reached the very top. There, in a land above the sky, he saw a massive castle. Cautiously, he approached and slipped through the giant door. The castle was the home of a fearsome Giant, a towering figure with a booming voice and a terrible temper. Hiding in a cupboard, Jack watched as the Giant ate his enormous meal and then commanded his treasures to appear. He had a hen that laid perfect, solid gold eggs and a small, magical harp that played the most beautiful music all by itself.\n\nWhen the Giant fell into a deep, rumbling sleep, Jack saw his chance. He crept out, snatched the hen that laid golden eggs, and scrambled back down the beanstalk as fast as he could. His mother was overjoyed, and for a while, the golden eggs provided them with everything they needed. But Jack's adventurous spirit was not satisfied. He climbed the beanstalk a second time. This time, he waited for the Giant to sleep and stole the magical harp.\n\nBut as Jack made his escape, the little harp cried out, "Master! Master!" The Giant awoke with a mighty roar and saw Jack running away with his prized possession. The Giant leaped from his chair and gave chase. Jack scrambled down the beanstalk, the Giant's heavy footsteps shaking the very stalk behind him. "Mother! Quick, bring the axe!" Jack shouted as he neared the ground. He leaped from the final branches, grabbed the axe from his waiting mother, and began to chop at the base of the beanstalk with all his might. With a final, mighty swing, the stalk snapped. There was a tremendous, earth-shaking crash as the Giant and the beanstalk came tumbling down. That was the end of the Giant. From that day on, Jack and his Mother lived a comfortable and happy life, thanks to their magical treasures.`;
-
-const generatePersonalizedStoryText = async (
-    storySelection: string,
-    character1Name: string,
-    character2Name: string,
+const getStoryPrompt = (
+    storySelection: StoryName, 
+    character1Name: string, 
+    character2Name: string, 
     character3Name: string
-): Promise<string> => {
-    // FIX: Corrected invalid `key of` syntax to the correct `keyof` operator for type assertion.
-    const storyInfo = storyCharacterRoles[storySelection as keyof typeof storyCharacterRoles];
-    const storyTemplate = storyTemplates[storySelection as keyof typeof storyTemplates];
-    if (!storyTemplate || !storyInfo) throw new Error("Invalid story selection.");
+) => {
+    const story = storyCharacterRoles[storySelection];
+    const char1 = character1Name || story.originalChar1;
+    const char2 = character2Name || story.originalChar2;
+    const char3 = character3Name || story.originalChar3;
 
-    let replacements = `Replace the name "${storyInfo.originalChar1}" with "${character1Name}".`;
-    if (storyInfo.originalChar2 && character2Name.trim()) {
-        replacements += ` Also, replace the name or title "${storyInfo.originalChar2}" with "${character2Name}".`;
-    }
-    if (storyInfo.originalChar3 && character3Name.trim()) {
-        replacements += ` Finally, replace the name or title "${storyInfo.originalChar3}" with "${character3Name}".`;
-    }
+    return `Write a short, personalized version of the classic fairy tale "${storySelection}", suitable for a young child (around 5-7 years old). The story should be approximately 500-600 words long and divided into 5-6 paragraphs, separated by double newlines (\n\n).
 
-    const prompt = `Rewrite the following classic story. ${replacements} Make the replacements seamless and natural throughout the entire text, ensuring grammar and pronouns are correct. Do not add any new plot points or change the story's meaning. Just perform the name replacements.\n\n---\n${storyTemplate.text}\n---`;
+    Please replace the original characters with the following names:
+    - The main character (originally ${story.originalChar1}) is now named "${char1}".
+    - The second character (originally ${story.originalChar2}) is now named "${char2}".
+    - The third character (originally ${story.originalChar3}, the ${story.char3Role}) is now named "${char3}".
 
-    const response = await ai.models.generateContent({ model: 'gemini-2.5-flash', contents: prompt });
-    return response.text.trim();
+    Keep the core plot of the story, but feel free to simplify the language and make the tone warm, positive, and magical. Focus on themes of kindness, bravery, and friendship. Do not include any scary or overly dramatic elements.
+
+    The final output should be ONLY the text of the story. Do not add any titles, headings, or introductory phrases like "Here is the story:".
+    `;
 };
+
+const getIllustrationPromptsFromStory = async (storyText: string): Promise<string[]> => {
+    const prompt = `Based on the following children's story, create three short, simple, one-sentence prompts for illustrations. Each prompt should describe a key visual moment from the story. The prompts should be in a numbered list.
+
+    For example:
+    1. A brave knight stands before a friendly dragon.
+    2. The knight and dragon fly over a castle.
+    3. They share a cup of tea in a sunny field.
+
+    Story:
+    ---
+    ${storyText}
+    ---
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt
+    });
+
+    return response.text.split('\n').map(p => p.replace(/^\d+\.\s*/, '').trim()).filter(p => p);
+};
+
 
 export const generatePersonalizedStorybook = async (
-    storySelection: keyof typeof storyTemplates,
+    storySelection: StoryName,
     character1Name: string,
     character2Name: string,
     character3Name: string,
@@ -380,56 +374,102 @@ export const generatePersonalizedStorybook = async (
     childImage: ChildImage | null,
     onProgress: (message: string, progress: number) => void
 ): Promise<StorybookContent> => {
-    const storyInfo = storyCharacterRoles[storySelection];
-    const storyTemplate = storyTemplates[storySelection];
-    if (!storyTemplate || !storyInfo) throw new Error("Invalid story selection.");
+    onProgress('Gathering enchanted ink and paper...', 0);
 
-    const personalizedTitle = storyInfo.titleTemplate.replace('%CHAR1%', character1Name);
-    
-    onProgress('Weaving a magical tale...', 10);
-    const personalizedText = await generatePersonalizedStoryText(storySelection, character1Name, character2Name, character3Name);
-    
-    let coverImage: string;
-    let illustrations: string[];
-    
-    if (storybookMode === 'classic' && preMadeIllustrations[storySelection]) {
-        onProgress('Gathering classic illustrations...', 50);
-        coverImage = preMadeIllustrations[storySelection].cover;
-        illustrations = preMadeIllustrations[storySelection].illustrations;
-        await new Promise(res => setTimeout(res, 500)); // Simulate work
-    } else {
-        const prompts = storyTemplate.illustrationPrompts(character1Name, character2Name || storyInfo.originalChar2);
-        const imagePrompts = [
-          `A beautiful, vibrant, full-color storybook cover illustration for the fairy tale '${personalizedTitle}' starring ${character1Name}. Do not include any text.`,
-          ...prompts,
-        ];
+    const storyPrompt = getStoryPrompt(storySelection, character1Name, character2Name, character3Name);
+    const textResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: storyPrompt
+    });
+    const storyText = textResponse.text.trim();
 
-        const generatedImages: string[] = [];
-        const totalImages = imagePrompts.length;
+    onProgress('Writing your magical tale...', 25);
+    
+    const titles: Record<StoryName, string> = {
+        cinderella: "Cinderella's Magical Night",
+        snow_white: "Snow White's Forest Friends",
+        jack_beanstalk: "Jack's Giant Adventure",
+        three_pigs: "The Three Pigs' Great Escape",
+        goldilocks: "Goldilocks and the Just Right Day",
+        red_riding_hood: "Red Riding Hood's Forest Path"
+    };
+    const title = titles[storySelection];
 
-        for(let i=0; i<totalImages; i++) {
-            const progress = 25 + (i / totalImages) * 70; // Progress from 25% to 95%
-            const message = i === 0 ? 'Dreaming up a beautiful cover...' : `Creating illustration ${i} of ${totalImages-1}...`;
-            onProgress(message, progress);
+    const characters = { character1Name, character2Name, character3Name };
+    
+    const illustrationPromises: Promise<string>[] = [];
+    const totalSteps = (storybookMode === 'personalized' ? 3 : 3) + 2; // text, cover + 3 illustrations
+
+    // Generate cover
+    const coverPrompt = `A beautiful, enchanting children's storybook cover for a story titled "${title}". The scene should be magical and whimsical, reflecting the theme of ${storySelection}. ${childImage ? `The main character should be based on the person in the provided photo.` : `The main character, ${character1Name}, should be featured prominently.`}`;
+    const coverPromise = (childImage ? generateImageWithImage(coverPrompt, childImage, true) : generateImage(coverPrompt, true))
+        .then(result => {
+            onProgress('Designing the storybook cover...', Math.round((2 / totalSteps) * 100));
+            return result;
+        });
+
+    let illustrations: string[] = [];
+
+    if (storybookMode === 'personalized') {
+        onProgress('Dreaming up illustrations...', Math.round((2 / totalSteps) * 100));
+        const illustrationPrompts = await getIllustrationPromptsFromStory(storyText);
+        
+        for (let i = 0; i < 3; i++) {
+            const prompt = illustrationPrompts[i] || `A key scene from the story of ${title} featuring ${character1Name}.`;
+            const fullPrompt = `${prompt} ${childImage ? `The main character should look like the person in the provided photo.` : ''}`;
             
-            let imageUrl: string;
-            // Use the child's image for the main character illustrations if provided
-            if (childImage && i > 0) { // i > 0 skips the cover
-                const personalizedPrompt = `The main character, ${character1Name}, must be an accurate representation of the person in the provided photo. It is crucial to preserve their exact facial features, hair, and expression. Place this character into the following scene: "${imagePrompts[i]}".`;
-                imageUrl = await generateImageWithImage(personalizedPrompt, childImage, true);
-            } else {
-                 imageUrl = await generateImage(imagePrompts[i], true);
-            }
-            generatedImages.push(imageUrl);
+            const promise = (childImage ? generateImageWithImage(fullPrompt, childImage, true) : generateImage(fullPrompt, true))
+                .then(result => {
+                    onProgress(`Painting illustration ${i + 1}...`, Math.round(((i + 3) / totalSteps) * 100));
+                    return result;
+                });
+            illustrationPromises.push(promise);
         }
-        [coverImage, ...illustrations] = generatedImages;
+        illustrations = await Promise.all(illustrationPromises);
+    } else {
+        // For 'classic' mode, we'll still generate illustrations to satisfy the PDF generator.
+        onProgress('Finding classic illustrations...', 50);
+        const classicPrompts = [
+            `A scene of ${character1Name} from the story of ${storySelection}, in a classic fairytale illustration style.`,
+            `A scene of ${character1Name} and ${character2Name || 'another character'} from the story of ${storySelection}, in a classic fairytale illustration style.`,
+            `A happy ending scene for ${character1Name} from the story of ${storySelection}, in a classic fairytale illustration style.`,
+        ];
+        for (let i = 0; i < 3; i++) {
+            const promise = generateImage(classicPrompts[i], true).then(result => {
+                 onProgress(`Polishing illustration ${i + 1}...`, 60 + (i * 10));
+                 return result;
+            });
+            illustrationPromises.push(promise);
+        }
+        illustrations = await Promise.all(illustrationPromises);
     }
 
+    const coverImage = await coverPromise;
+    
+    onProgress('Binding the book...', 95);
+    
     return {
-        text: personalizedText,
-        illustrations: illustrations,
-        coverImage: coverImage,
-        title: personalizedTitle,
-        characters: { character1Name, character2Name, character3Name }
+        text: storyText,
+        illustrations,
+        coverImage,
+        title,
+        characters,
     };
+};
+
+// --- Chatbot Service ---
+
+export const startChat = (): Chat => {
+    const chat = ai.chats.create({
+        model: 'gemini-2.5-flash',
+        config: {
+            systemInstruction: 'You are a friendly and helpful AI assistant for a creative app that generates coloring books, stickers, and stories for kids. Your tone should be encouraging and positive. You can answer questions about the app, suggest creative ideas, or have a fun chat with the user.',
+        },
+    });
+    return chat;
+};
+
+export const sendMessageToBot = async (chat: Chat, message: string): Promise<string> => {
+    const response = await chat.sendMessage({ message });
+    return response.text;
 };
