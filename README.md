@@ -1,5 +1,5 @@
 
-# 🎨 AI Creative Studio ✨
+# AI Creative Studio 
 
 > A magical web application that transforms your ideas into personalized coloring books, vibrant stickers, and enchanting storybooks using the power of Google's Gemini AI.
 
@@ -7,11 +7,11 @@ Welcome to the AI Creative Studio, a one-stop workshop for sparking children's c
 
 ---
 
-## 🌟 Features
+##  Features
 
 The studio is divided into three main creative modes, each packed with features to make your creations special.
 
-### 📚 Coloring Book Generator
+###  Coloring Book Generator
 - **Custom Themes:** Generate pages based on any theme you can imagine, from "Space Dinosaurs" to "Underwater Unicorns."
 - **Personalization:** Add a child's name and select their age level (Preschool, Kids, Big Kids) to tailor the complexity of the pages.
 - **AI-Powered Character:** Optionally upload a photo of your child, and the AI will create a coloring book character inspired by them!
@@ -19,7 +19,7 @@ The studio is divided into three main creative modes, each packed with features 
 - **Customizable Cover:** Design a unique cover by choosing a template, font style, title color, and adding a personal dedication.
 - **Print-Ready PDF:** Download the entire multi-page coloring book as a single, high-quality PDF, perfectly formatted for letter-sized paper.
 
-### 🎉 Sticker Maker
+###  Sticker Maker
 - **Theme-Based Creation:** Simply enter a theme like "Happy Avocados" or "Superhero Pets" to get a sheet of unique stickers.
 - **AI-Generated Variety:** The AI first brainstorms a list of distinct sticker ideas based on your theme and then generates an image for each one.
 - **Personal Touch:** Optionally include a photo to have the AI create stickers featuring a character that looks like your child.
@@ -27,7 +27,7 @@ The studio is divided into three main creative modes, each packed with features 
   - **PDF Sticker Sheet:** Get a ready-to-print PDF with all stickers arranged on a single page.
   - **ZIP Archive:** Download individual, high-resolution PNG files for each sticker.
 
-### 📖 Story Teller
+###  Story Teller
 - **Classic Tales, Reimagined:** Choose from a library of beloved fairy tales like Cinderella, Snow White, or The Three Little Pigs.
 - **Personalized Characters:** Replace the original character names with names of your choice to make your child the star of the story.
 - **Two Unique Modes:**
@@ -35,12 +35,12 @@ The studio is divided into three main creative modes, each packed with features 
   - **Personalized AI Mode:** The AI writes the story *and* generates brand new, unique illustrations for every page based on the story's text, creating a truly one-of-a-kind book.
 - **Downloadable Storybook:** Receive your personalized tale as a beautifully formatted PDF, complete with a custom cover and illustrations woven into the text.
 
-### 🤖 AI Assistant
+### AI Assistant
 - A friendly, built-in chatbot is available to answer questions, suggest creative ideas, or just have a fun chat.
 
 ---
 
-## 🛠️ How It Works: The Technology Stack
+## How It Works: The Technology Stack
 
 This application is built entirely on the frontend, leveraging powerful browser-based technologies and the Google Gemini API.
 
@@ -57,7 +57,7 @@ This application is built entirely on the frontend, leveraging powerful browser-
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 This is a client-side application and can be run by simply opening the `index.html` file in a web browser.
 
@@ -75,7 +75,7 @@ You must have a Google Gemini API key. This application is configured to access 
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 The codebase is organized into logical directories to maintain clarity and scalability.
 
