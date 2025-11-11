@@ -14,7 +14,7 @@ The studio is divided into three main creative modes, each packed with features 
 
 ###  Coloring Book Generator
  
-<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b154f694-9bad-461e-bfa3-9219757763ed" />
+<img width="1016" height="809" alt="image" src="https://github.com/user-attachments/assets/9b3f8419-08fd-4a71-814a-1c22e7d6069c" />
 
 - **Custom Themes:** Generate pages based on any theme you can imagine, from "Space Dinosaurs" to "Underwater Unicorns."
 - **Personalization:** Add a child's name and select their age level (Preschool, Kids, Big Kids) to tailor the complexity of the pages.
