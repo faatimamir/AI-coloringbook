@@ -1,13 +1,19 @@
-
 {
-  "headers": [
+  "version": 2,
+  "routes": [
     {
-      "source": "/(.*\\.tsx)",
-      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+      "src": "/(.*\\.tsx)",
+      "headers": { "Content-Type": "application/javascript; charset=utf-8" },
+      "dest": "/$1"
     },
     {
-      "source": "/(.*\\.ts)",
-      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+      "src": "/(.*\\.ts)",
+      "headers": { "Content-Type": "application/javascript; charset=utf-8" },
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
     }
   ]
 }
