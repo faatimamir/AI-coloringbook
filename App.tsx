@@ -1,14 +1,65 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { ColoringBookForm } from './components/ColoringBookForm.tsx';
 import { ImageGrid } from './components/ImageGrid.tsx';
 import { Spinner } from './components/Spinner.tsx';
 import { createColoringBookPdf, createStickerSheetPdf, createStickersZip, createStoryPdf } from './services/pdfService.ts';
 import { Chatbot } from './components/Chatbot.tsx';
-import { ChatIcon } from './components/icons.tsx';
+import { ChatIcon, PaintBrushIcon, StickerIcon, BookIcon } from './components/icons.tsx';
 import type { GeneratedImages, GenerationFormData, StorybookContent } from './types.ts';
 
 type Mode = 'coloringBook' | 'stickerMaker' | 'storyTeller';
+
+// --- Welcome Modal Component ---
+interface WelcomeModalProps {
+  onClose: () => void;
+}
+const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-lg w-full transform animate-scale-in">
+        <h2 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 mb-4">
+          Welcome to the AI Creative Studio!
+        </h2>
+        <p className="text-center text-slate-600 mb-8">
+          Your one-stop workshop for sparking creativity. Let's make something magical!
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center mb-8">
+          <div className="flex flex-col items-center p-2">
+            <div className="bg-purple-100 p-4 rounded-full mb-3">
+              <PaintBrushIcon />
+            </div>
+            <h3 className="font-semibold text-slate-800">Coloring Books</h3>
+            <p className="text-xs text-slate-500 mt-1">Create custom books from any theme.</p>
+          </div>
+          <div className="flex flex-col items-center p-2">
+            <div className="bg-pink-100 p-4 rounded-full mb-3">
+              <StickerIcon />
+            </div>
+            <h3 className="font-semibold text-slate-800">Sticker Maker</h3>
+            <p className="text-xs text-slate-500 mt-1">Design vibrant, print-ready stickers.</p>
+          </div>
+          <div className="flex flex-col items-center p-2">
+            <div className="bg-blue-100 p-4 rounded-full mb-3">
+              <BookIcon />
+            </div>
+            <h3 className="font-semibold text-slate-800">Story Teller</h3>
+            <p className="text-xs text-slate-500 mt-1">Personalize classic fairy tales.</p>
+          </div>
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all transform hover:scale-105"
+        >
+          Let's Get Started!
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<Mode>('coloringBook');
@@ -28,6 +79,19 @@ const App: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
+  const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
+    if (!hasSeenWelcome) {
+      setIsWelcomeModalOpen(true);
+    }
+  }, []);
+
+  const handleCloseWelcomeModal = () => {
+    sessionStorage.setItem('hasSeenWelcome', 'true');
+    setIsWelcomeModalOpen(false);
+  };
 
   const handleGenerate = useCallback(async (formData: GenerationFormData) => {
     // Gracefully handle missing API key
@@ -144,6 +208,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 font-sans text-slate-800">
+      {isWelcomeModalOpen && <WelcomeModal onClose={handleCloseWelcomeModal} />}
       <main className="container mx-auto px-4 py-8 md:py-12">
         <header className="text-center mb-8 md:mb-12">
           <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
