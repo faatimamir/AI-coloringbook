@@ -7,19 +7,26 @@ Welcome to the AI Creative Studio, a one-stop workshop for sparking children's c
 
 ---
 
+
 ##  Features
 
 The studio is divided into three main creative modes, each packed with features to make your creations special.
 
 ###  Coloring Book Generator
+ 
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b154f694-9bad-461e-bfa3-9219757763ed" />
+
 - **Custom Themes:** Generate pages based on any theme you can imagine, from "Space Dinosaurs" to "Underwater Unicorns."
 - **Personalization:** Add a child's name and select their age level (Preschool, Kids, Big Kids) to tailor the complexity of the pages.
 - **AI-Powered Character:** Optionally upload a photo of your child, and the AI will create a coloring book character inspired by them!
 - **Variety of Activities:** The generated book includes not just coloring pages, but also fun activities like mazes, connect-the-dots, and name tracing.
 - **Customizable Cover:** Design a unique cover by choosing a template, font style, title color, and adding a personal dedication.
 - **Print-Ready PDF:** Download the entire multi-page coloring book as a single, high-quality PDF, perfectly formatted for letter-sized paper.
+  
 
 ###  Sticker Maker
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/cab24601-9560-4eac-8133-aee0e2c1ab9a" />
+
 - **Theme-Based Creation:** Simply enter a theme like "Happy Avocados" or "Superhero Pets" to get a sheet of unique stickers.
 - **AI-Generated Variety:** The AI first brainstorms a list of distinct sticker ideas based on your theme and then generates an image for each one.
 - **Personal Touch:** Optionally include a photo to have the AI create stickers featuring a character that looks like your child.
@@ -28,11 +35,16 @@ The studio is divided into three main creative modes, each packed with features 
   - **ZIP Archive:** Download individual, high-resolution PNG files for each sticker.
 
 ###  Story Teller
+
 - **Classic Tales, Reimagined:** Choose from a library of beloved fairy tales like Cinderella, Snow White, or The Three Little Pigs.
 - **Personalized Characters:** Replace the original character names with names of your choice to make your child the star of the story.
 - **Two Unique Modes:**
   - **Classic Mode (Fast):** The AI writes a personalized story and pairs it with beautiful, pre-generated illustrations for a classic storybook feel.
+    <img width="852" height="612" alt="image" src="https://github.com/user-attachments/assets/b7bf7ab6-bb80-4331-a4d5-e222a4e94aa7" />
+
   - **Personalized AI Mode:** The AI writes the story *and* generates brand new, unique illustrations for every page based on the story's text, creating a truly one-of-a-kind book.
+     <img width="1117" height="698" alt="image" src="https://github.com/user-attachments/assets/f8b53d74-8d39-4207-b33f-3c31db94ff4d" />
+
 - **Downloadable Storybook:** Receive your personalized tale as a beautifully formatted PDF, complete with a custom cover and illustrations woven into the text.
 
 ### AI Assistant
