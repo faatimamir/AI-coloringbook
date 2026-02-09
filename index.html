@@ -3,7 +3,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Creative Studio | Personalized for Kids</title>
     
@@ -13,17 +12,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Environment Shim (Before any modules load) -->
+    <!-- Environment Shim -->
     <script>
-      (function() {
-        window.process = window.process || {};
-        window.process.env = window.process.env || {};
-        // Vercel or other hosts will inject the real key if available
-        window.process.env.API_KEY = window.process.env.API_KEY || "";
-      })();
+      window.process = { 
+        env: { 
+          API_KEY: "" 
+        } 
+      };
     </script>
 
-    <!-- Import Map (Consolidated and Cleaned) -->
+    <!-- Import Map -->
     <script type="importmap">
 {
   "imports": {
@@ -46,12 +44,12 @@
       ::-webkit-scrollbar-track { background: #f1f1f1; }
       ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
       ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      #root { min-height: 100vh; }
     </style>
   </head>
 
   <body class="bg-slate-50 selection:bg-purple-200">
     <div id="root"></div>
-    <!-- No leading slash ensures relative resolution in the browser context -->
     <script type="text/babel" data-presets="react,typescript" data-type="module" src="index.tsx"></script>
   </body>
 </html>

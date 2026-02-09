@@ -2,41 +2,9 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "headers": [
-    {
-      "source": "/(.*\\.(tsx|ts|js))",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "text/javascript"
-        }
-      ]
-    }
-  ],
+  "trailingSlash": false,
   "rewrites": [
-    {
-      "source": "/index.tsx",
-      "destination": "/index.tsx"
-    },
-    {
-      "source": "/App.tsx",
-      "destination": "/App.tsx"
-    },
-    {
-      "source": "/types.ts",
-      "destination": "/types.ts"
-    },
-    {
-      "source": "/components/:path*",
-      "destination": "/components/:path*"
-    },
-    {
-      "source": "/services/:path*",
-      "destination": "/services/:path*"
-    },
-    {
-      "source": "/((?!.*\\.).*)",
-      "destination": "/index.html"
-    }
+    { "handle": "filesystem" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
