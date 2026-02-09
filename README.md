@@ -32,21 +32,21 @@ Below is a complete 9-page preview of a personalized coloring book generated for
 ## Core Features
 
 ### Coloring Book Generator
-*   **Infinite Themes:** From Space Dinosaurs to Magical Forest Creatures.
-*   **Child's Name Integration:** Every page is personalized with custom captions and name-tracing activities.
-*   **AI Character Clone:** Upload a photo, and the AI sketches your child into the adventure.
-*   **Print-Ready PDFs:** Professionally formatted for standard home printing.
+*   Infinite Themes: From Space Dinosaurs to Magical Forest Creatures.
+*   Child's Name Integration: Every page is personalized with custom captions and name-tracing activities.
+*   AI Character Clone: Upload a photo, and the AI sketches your child into the adventure.
+*   Print-Ready PDFs: Professionally formatted for standard home printing.
 
 ### Sticker Maker
-*   **Die-Cut Style:** Generates stickers with a classic white vinyl border.
-*   **Batch Creation:** Generates 9 unique designs per theme in one click.
-*   **Flexible Exports:** Download as a high-quality PDF sheet or a ZIP of individual PNGs.
+*   Die-Cut Style: Generates stickers with a classic white vinyl border.
+*   Batch Creation: Generates 9 unique designs per theme in one click.
+*   Flexible Exports: Download as a high-quality PDF sheet or a ZIP of individual PNGs.
 
 ### Story Teller
-*   **Classic Meets Modern:** Choose a classic tale and swap characters for real-life friends.
-*   **Two Artistic Modes:**
-    *   **Classic:** Fast, beautiful pre-made illustrations.
-    *   **AI-Driven:** Unique, custom-generated art for every single scene.
+*   Classic Meets Modern: Choose a classic tale and swap characters for real-life friends.
+*   Two Artistic Modes:
+    *   Classic: Fast, beautiful pre-made illustrations.
+    *   AI-Driven: Unique, custom-generated art for every single scene.
 
 ### Friendly AI Assistant
 *   A magical companion is always available to help brainstorm themes or answer questions.
@@ -56,10 +56,10 @@ Below is a complete 9-page preview of a personalized coloring book generated for
 ## Technical Overview
 
 The studio is designed as a modern creative workshop featuring:
-- **Glassmorphism:** Soft, blurred backgrounds for an airy feel.
-- **Vibrant Gradients:** A signature palette of Purple, Pink, and Blue.
-- **Playful Animations:** Elements scale and fade into view smoothly.
-- **Kid-Friendly UI:** Large, accessible buttons and clear visual progress bars.
+- Glassmorphism: Soft, blurred backgrounds for an airy feel.
+- Vibrant Gradients: A signature palette of Purple, Pink, and Blue.
+- Playful Animations: Elements scale and fade into view smoothly.
+- Kid-Friendly UI: Large, accessible buttons and clear visual progress bars.
 
 ---
 
