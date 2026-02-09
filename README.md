@@ -1,25 +1,18 @@
-# 🎨 AI Creative Studio
+# AI Creative Studio
 
-> **Where Imagination Becomes Art.** ✨
+> **Where Imagination Becomes Art.** 
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) ![React](https://img.shields.io/badge/react-%2320232a.svg?style=flat&logo=react&logoColor=%2361DAFB) ![Gemini AI](https://img.shields.io/badge/Google%20Gemini-8E75B2?style=flat&logo=google&logoColor=white) ![TailwindCSS](https://img.shields.io/badge/tailwindcss-%2338B2AC.svg?style=flat&logo=tailwind-css&logoColor=white)
 
-Transform your child's favorite ideas into **personalized coloring books**, **vibrant stickers**, and **enchanting storybooks** using the power of Google's Gemini AI. 🚀
+Transform your child's favorite ideas into **personalized coloring books**, **vibrant stickers**, and **enchanting storybooks** using the power of Google's Gemini AI. 
 
 ---
 
-## 🌟 Application Interface
-
-Experience a seamless and magical creative process.
-
-| 📖 Book Creator | 🏷️ Sticker Maker | 🎭 Story Teller |
-| :---: | :---: | :---: |
-| ![Book Details](./images/ui-books.png) | ![Sticker Details](./images/ui-stickers.png) | ![Story Details](./images/ui-stories.png) |
-| *Personalized Book Forms* | *Custom Sticker Themes* | *Classic and AI Story Modes* |
+ook Forms* | *Custom Sticker Themes* | *Classic and AI Story Modes* |
 
 ---
 
-## 🖍️ Sample Coloring Book: Friendly Monsters Party
+## Sample Coloring Book: Friendly Monsters Party
 
 Below is a complete **9-page preview** of a personalized coloring book generated for "Yousaf".
 
@@ -37,11 +30,11 @@ Below is a complete **9-page preview** of a personalized coloring book generated
 
 See the AI Creative Studio in action!
 
-### 📥 Download Sample Result
+###  Download Sample Result
 Want to see the full quality? Download the generated PDF below:
-👉 **[Download My-Coloring-Book.pdf](./My-Coloring-Book.pdf)**
+ **[Download My-Coloring-Book.pdf](./My-Coloring-Book.pdf)**
 
-### 🖼️ UI Screenshots
+###  UI Screenshots
 | Dashboard View | Sticker Generation | Story Mode |
 | :---: | :---: | :---: |
 | ![Capture](./images/Capture.PNG) | ![Capture1](./images/Capture1.PNG) | ![Capture2](./images/Capture2.PNG) |
@@ -56,33 +49,33 @@ Want to see the full quality? Download the generated PDF below:
 *   **AI Character Clone**: Upload a photo, and the AI sketches your child into the adventure.
 *   **Print-Ready PDFs**: Professionally formatted for standard home printing.
 
-### 🏷️ Sticker Maker
+### Sticker Maker
 *   **Die-Cut Style**: Generates stickers with a classic white vinyl border.
 *   **Batch Creation**: Generates 9 unique designs per theme in one click.
 *   **Flexible Exports**: Download as a high-quality PDF sheet or a ZIP of individual PNGs.
 
-### 🎭 Story Teller
+### Story Teller
 *   **Classic Meets Modern**: Choose a classic tale and swap characters for real-life friends.
 *   **Two Artistic Modes**:
     *   **Classic**: Fast, beautiful pre-made illustrations.
     *   **AI-Driven**: Unique, custom-generated art for every single scene.
 
-### 🤖 Friendly AI Assistant
+### Friendly AI Assistant
 *   A magical companion is always available to help brainstorm themes or answer questions.
 
 ---
 
-## 🛠️ Technical Overview
+## Technical Overview
 
 The studio is designed as a modern creative workshop featuring:
-- **Glassmorphism**: Soft, blurred backgrounds for an airy feel. 🌫️
-- **Vibrant Gradients**: A signature palette of Purple, Pink, and Blue. 🎨
-- **Playful Animations**: Elements scale and fade into view smoothly. ✨
-- **Kid-Friendly UI**: Large, accessible buttons and clear visual progress bars. 👶
+- **Glassmorphism**: Soft, blurred backgrounds for an airy feel. 
+- **Vibrant Gradients**: A signature palette of Purple, Pink, and Blue.
+- **Playful Animations**: Elements scale and fade into view smoothly.
+- **Kid-Friendly UI**: Large, accessible buttons and clear visual progress bars. 
 
 ---
 
-## 💻 Tech Stack
+##  Tech Stack
 
 | Technology | Purpose |
 | :--- | :--- |
@@ -93,7 +86,7 @@ The studio is designed as a modern creative workshop featuring:
 
 ---
 
-## 🏁 Getting Started
+##  Getting Started
 
 ### 1. Configure the API Key
 Obtain a Gemini API Key from [Google AI Studio](https://aistudio.google.com/app/apikey).
@@ -108,4 +101,4 @@ Set it in your environment settings:
 Open `index.html` in a modern browser.
 
 ---
-*Created for the next generation of artists.* 🎨
+*Created for the next generation of artists.* 
