@@ -2,9 +2,21 @@
 {
   "version": 2,
   "cleanUrls": true,
-  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/(.*\\.(tsx|ts))",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript"
+        }
+      ]
+    }
+  ],
   "rewrites": [
-    { "handle": "filesystem" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/((?!.*\\.(tsx|ts|js|json|png|jpg|svg|css|pdf|zip)).*)",
+      "destination": "/index.html"
+    }
   ]
 }
