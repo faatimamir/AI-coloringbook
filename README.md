@@ -12,21 +12,9 @@ ook Forms* | *Custom Sticker Themes* | *Classic and AI Story Modes* |
 
 ---
 
-## Sample Coloring Book: Friendly Monsters Party
 
-Below is a complete **9-page preview** of a personalized coloring book generated for "Yousaf".
 
-| Page 1: Custom Cover | Page 2: Personalized Character | Page 3: Fun Scene |
-| :---: | :---: | :---: |
-| ![Page 1](./images/sample-page-1.png) | ![Page 2](./images/sample-page-2.png) | ![Page 3](./images/sample-page-3.png) |
-| **Page 4: Amazing Maze** | **Page 5: Connect the Dots** | **Page 6: Find the Items** |
-| ![Page 4](./images/sample-page-4.png) | ![Page 5](./images/sample-page-5.png) | ![Page 6](./images/sample-page-6.png) |
-| **Page 7: Name Tracing** | **Page 8: Fun Pattern** | **Page 9: Coloring Award** |
-| ![Page 7](./images/sample-page-7.png) | ![Page 8](./images/sample-page-8.png) | ![Page 9](./images/sample-page-9.png) |
-
----
-
-## 📸 Project Gallery & Results
+## Project Gallery & Results
 
 See the AI Creative Studio in action!
 
