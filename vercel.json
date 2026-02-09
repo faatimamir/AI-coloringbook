@@ -1,13 +1,41 @@
+
 {
   "version": 2,
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*\\.(tsx|ts|js))",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/javascript"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
-      "source": "/(.*\\.(?:tsx|ts|js|json|png|jpg|svg|css|pdf|zip))$",
-      "destination": "/$1"
+      "source": "/index.tsx",
+      "destination": "/index.tsx"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/App.tsx",
+      "destination": "/App.tsx"
+    },
+    {
+      "source": "/types.ts",
+      "destination": "/types.ts"
+    },
+    {
+      "source": "/components/:path*",
+      "destination": "/components/:path*"
+    },
+    {
+      "source": "/services/:path*",
+      "destination": "/services/:path*"
+    },
+    {
+      "source": "/((?!.*\\.).*)",
       "destination": "/index.html"
     }
   ]
