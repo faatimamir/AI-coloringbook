@@ -1,10 +1,13 @@
-
 {
   "version": 2,
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/((?!.*\\.[a-zA-Z0-9]+$).*)",
+      "source": "/(.*\\.(?:tsx|ts|js|json|png|jpg|svg|css|pdf|zip))$",
+      "destination": "/$1"
+    },
+    {
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
