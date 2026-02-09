@@ -19,41 +19,32 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
       <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-8 max-w-lg w-full transform animate-scale-in">
         <h2 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 mb-4">
-          Welcome to the AI Creative Studio!
+          Welcome to the Studio!
         </h2>
         <p className="text-center text-slate-600 mb-8">
-          Your one-stop workshop for sparking creativity. Let's make something magical!
+          Your creative workshop for magic and wonder. Let's build something beautiful together!
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center mb-8">
-          <div className="flex flex-col items-center p-2">
-            <div className="bg-purple-100 p-4 rounded-full mb-3">
-              <PaintBrushIcon />
-            </div>
-            <h3 className="font-semibold text-slate-800">Coloring Books</h3>
-            <p className="text-xs text-slate-500 mt-1">Create custom books from any theme.</p>
+        <div className="grid grid-cols-3 gap-4 text-center mb-8">
+          <div className="flex flex-col items-center">
+            <div className="bg-purple-100 p-3 rounded-full mb-2"><PaintBrushIcon /></div>
+            <p className="text-xs font-semibold">Books</p>
           </div>
-          <div className="flex flex-col items-center p-2">
-            <div className="bg-pink-100 p-4 rounded-full mb-3">
-              <StickerIcon />
-            </div>
-            <h3 className="font-semibold text-slate-800">Sticker Maker</h3>
-            <p className="text-xs text-slate-500 mt-1">Design vibrant, print-ready stickers.</p>
+          <div className="flex flex-col items-center">
+            <div className="bg-pink-100 p-3 rounded-full mb-2"><StickerIcon /></div>
+            <p className="text-xs font-semibold">Stickers</p>
           </div>
-          <div className="flex flex-col items-center p-2">
-            <div className="bg-blue-100 p-4 rounded-full mb-3">
-              <BookIcon />
-            </div>
-            <h3 className="font-semibold text-slate-800">Story Teller</h3>
-            <p className="text-xs text-slate-500 mt-1">Personalize classic fairy tales.</p>
+          <div className="flex flex-col items-center">
+            <div className="bg-blue-100 p-3 rounded-full mb-2"><BookIcon /></div>
+            <p className="text-xs font-semibold">Stories</p>
           </div>
         </div>
 
         <button
           onClick={onClose}
-          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all transform hover:scale-105"
+          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 text-white font-bold py-3 rounded-xl transition-all shadow-lg active:scale-95"
         >
-          Let's Get Started!
+          Let's Start!
         </button>
       </div>
     </div>
@@ -63,23 +54,22 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<Mode>('coloringBook');
-  // Coloring Book State
   const [generatedImages, setGeneratedImages] = useState<GeneratedImages | null>(null);
   const [coloringBookPdfUrl, setColoringBookPdfUrl] = useState<string | null>(null);
-  // Sticker Maker State
   const [stickerImages, setStickerImages] = useState<string[] | null>(null);
   const [stickerPdfUrl, setStickerPdfUrl] = useState<string | null>(null);
   const [isZipLoading, setIsZipLoading] = useState<boolean>(false);
-  // Story Teller State
   const [storybookContent, setStorybookContent] = useState<StorybookContent | null>(null);
   const [storyPdfUrl, setStoryPdfUrl] = useState<string | null>(null);
-  // General State
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isChatOpen, setIsChatOpen] = useState<boolean>(false);
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [progress, setProgress] = useState<number>(0);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState<boolean>(false);
+
+  // Check for API key in standard and window locations
+  const apiKey = process.env.API_KEY || (window as any).process?.env?.API_KEY;
 
   useEffect(() => {
     const hasSeenWelcome = sessionStorage.getItem('hasSeenWelcome');
@@ -94,256 +84,178 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = useCallback(async (formData: GenerationFormData) => {
-    // Gracefully handle missing API key
-    if (!process.env.API_KEY) {
-        setError("Configuration Error: The API_KEY is missing. Please set it in your Vercel deployment settings.");
+    if (!apiKey) {
+        setError("Missing API Key. Please configure the environment variable to continue.");
         return;
     }
 
     setIsLoading(true);
     setError(null);
-    resetState(true); // Soft reset
-    setLoadingMessage('Warming up the AI...');
-    setProgress(0);
+    setGeneratedImages(null);
+    setStickerImages(null);
+    setStorybookContent(null);
+    setLoadingMessage('Initializing creative engine...');
+    setProgress(5);
 
     try {
-      // Dynamically import the Gemini service to avoid crashing on load if API key is missing
       const { generateColoringBookImages, generateStickers, generatePersonalizedStorybook } = await import('./services/geminiService.ts');
 
-      if (mode === 'coloringBook' && formData.name && formData.ageLevel && formData.coverOptions) {
-        const { theme, name, ageLevel, coverOptions, childImage } = formData;
+      if (mode === 'coloringBook') {
         const images = await generateColoringBookImages(
-          theme, name, ageLevel, coverOptions, childImage, 
-          (message, percent) => { setLoadingMessage(message); setProgress(percent); }
+          formData.theme, formData.name || 'Friend', formData.ageLevel || 'kids', formData.coverOptions!, formData.childImage, 
+          (msg, p) => { setLoadingMessage(msg); setProgress(p); }
         );
         setGeneratedImages(images);
-        const url = await createColoringBookPdf(images.coverImage, images.pages, theme, name);
+        const url = await createColoringBookPdf(images.coverImage, images.pages, images.theme, images.name);
         setColoringBookPdfUrl(url);
       } else if (mode === 'stickerMaker') {
-        const { theme, childImage } = formData;
         const stickers = await generateStickers(
-          theme, childImage,
-          (message, percent) => { setLoadingMessage(message); setProgress(percent); }
+          formData.theme, formData.childImage,
+          (msg, p) => { setLoadingMessage(msg); setProgress(p); }
         );
         setStickerImages(stickers);
         const pdfUrl = await createStickerSheetPdf(stickers);
         setStickerPdfUrl(pdfUrl);
-      } else if (mode === 'storyTeller' && formData.storySelection && formData.character1Name && formData.storybookMode) {
-         const { storySelection, character1Name, character2Name, character3Name, storybookMode, childImage } = formData;
+      } else if (mode === 'storyTeller') {
          const storybook = await generatePersonalizedStorybook(
-            storySelection, 
-            character1Name, 
-            character2Name || '', 
-            character3Name || '',
-            storybookMode,
-            childImage,
-            (message, percent) => { setLoadingMessage(message); setProgress(percent); }
+            formData.storySelection!, formData.character1Name!, formData.character2Name || '', formData.character3Name || '',
+            formData.storybookMode!, formData.childImage,
+            (msg, p) => { setLoadingMessage(msg); setProgress(p); }
         );
          setStorybookContent(storybook);
-         setLoadingMessage('Formatting your beautiful storybook...');
          const storyPdf = await createStoryPdf(storybook);
          setStoryPdfUrl(storyPdf);
-         setProgress(100);
-         setLoadingMessage('Your storybook is ready!');
       }
+      setProgress(100);
     } catch (e) {
       console.error(e);
-      setError(`Failed to generate ${mode.replace(/([A-Z])/g, ' $1')}. Please try again. Error: ${e instanceof Error ? e.message : String(e)}`);
+      setError(e instanceof Error ? e.message : "Something went wrong in the workshop!");
     } finally {
       setIsLoading(false);
       setLoadingMessage('');
-      // Don't reset progress to 0 immediately to show completion
     }
-  }, [mode]);
-
-  const resetState = (keepProgress = false) => {
-    setGeneratedImages(null);
-    setColoringBookPdfUrl(null);
-    setStickerImages(null);
-    setStickerPdfUrl(null);
-    setStorybookContent(null);
-    setStoryPdfUrl(null);
-    setError(null);
-    if (!keepProgress) {
-        setProgress(0);
-    }
-  }
+  }, [mode, apiKey]);
 
   const handleModeChange = (newMode: Mode) => {
-    if (newMode !== mode) {
-        setMode(newMode);
-        resetState();
-    }
+    setMode(newMode);
+    setError(null);
+    setProgress(0);
   }
 
-  const handleDownloadZip = async () => {
-    if (!stickerImages) return;
-    setIsZipLoading(true);
-    try {
-      await createStickersZip(stickerImages);
-    } catch(e) {
-      console.error("Failed to create ZIP", e);
-      setError("Could not create ZIP file.");
-    } finally {
-      setIsZipLoading(false);
-    }
-  };
-  
-  // Render an error message if API key is not set
-  if (!process.env.API_KEY && !isLoading && !error) {
+  // --- Early return for missing API key configuration ---
+  if (!apiKey && !isLoading && !error) {
      return (
-        <div className="min-h-screen bg-red-50 flex items-center justify-center p-4">
-            <div className="text-center p-8 bg-white shadow-2xl rounded-2xl max-w-lg border-2 border-red-200">
-                <h1 className="text-3xl font-bold text-red-600 mb-4">Configuration Error</h1>
-                <p className="text-slate-700 text-lg">
-                    The AI Creative Studio requires an API key to function.
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+            <div className="bg-white rounded-3xl shadow-xl p-8 max-w-md w-full border border-slate-200 text-center">
+                <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                    <span className="text-amber-600 text-3xl font-bold">!</span>
+                </div>
+                <h1 className="text-2xl font-bold text-slate-800 mb-2">Setup Required</h1>
+                <p className="text-slate-600 mb-8">
+                    To use the AI Creative Studio, you need to add your <strong>Gemini API Key</strong> to your environment variables.
                 </p>
-                <p className="mt-2 text-slate-600">
-                    Please make sure the <code className="bg-red-100 text-red-800 px-2 py-1 rounded">API_KEY</code> environment variable is set correctly in your Vercel deployment settings.
-                </p>
+                <div className="bg-slate-50 p-4 rounded-xl text-left mb-6 font-mono text-sm border border-slate-100">
+                    <p className="text-slate-400 mb-1">// vercel.json / .env</p>
+                    <p className="text-purple-600">API_KEY=your_key_here</p>
+                </div>
+                <a 
+                  href="https://aistudio.google.com/app/apikey" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-block w-full py-3 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-900 transition-colors mb-4"
+                >
+                  Get API Key
+                </a>
             </div>
         </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 font-sans text-slate-800">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
       {isWelcomeModalOpen && <WelcomeModal onClose={handleCloseWelcomeModal} />}
-      <main className="container mx-auto px-4 py-8 md:py-12">
-        <header className="text-center mb-8 md:mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500">
-            AI Creative Studio
-          </h1>
-          <p className="mt-2 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto">
-            Create magical coloring books, vibrant stickers, or personalized stories in seconds.
-          </p>
-        </header>
-
-        <div className="max-w-2xl mx-auto">
-          {/* Mode Tabs */}
-          <div className="flex justify-center border-b-2 border-slate-200 mb-8">
-            <button 
-              onClick={() => handleModeChange('coloringBook')}
-              className={`px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg transition-colors duration-300 ${mode === 'coloringBook' ? 'text-purple-600 border-b-4 border-purple-500' : 'text-slate-500 hover:text-purple-500'}`}
-            >
-              Coloring Book
-            </button>
-            <button 
-              onClick={() => handleModeChange('stickerMaker')}
-              className={`px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg transition-colors duration-300 ${mode === 'stickerMaker' ? 'text-purple-600 border-b-4 border-purple-500' : 'text-slate-500 hover:text-purple-500'}`}
-            >
-              Sticker Maker
-            </button>
-            <button 
-              onClick={() => handleModeChange('storyTeller')}
-              className={`px-4 sm:px-6 py-3 font-semibold text-base sm:text-lg transition-colors duration-300 ${mode === 'storyTeller' ? 'text-purple-600 border-b-4 border-purple-500' : 'text-slate-500 hover:text-purple-500'}`}
-            >
-              Story Teller
-            </button>
+      
+      <nav className="p-6">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 bg-gradient-to-tr from-purple-500 to-pink-500 rounded-lg shadow-md flex items-center justify-center text-white font-black italic">AS</div>
+            <span className="font-bold text-slate-800 text-xl tracking-tight hidden sm:block">Creative Studio</span>
           </div>
-        
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8">
-            <ColoringBookForm onSubmit={handleGenerate} isLoading={isLoading} mode={mode} />
+          <div className="flex bg-white/50 backdrop-blur p-1 rounded-xl shadow-sm border border-white/50">
+            <button onClick={() => handleModeChange('coloringBook')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'coloringBook' ? 'bg-white shadow-sm text-purple-600' : 'text-slate-500 hover:text-slate-700'}`}>Books</button>
+            <button onClick={() => handleModeChange('stickerMaker')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'stickerMaker' ? 'bg-white shadow-sm text-pink-600' : 'text-slate-500 hover:text-slate-700'}`}>Stickers</button>
+            <button onClick={() => handleModeChange('storyTeller')} className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${mode === 'storyTeller' ? 'bg-white shadow-sm text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}>Stories</button>
           </div>
         </div>
+      </nav>
 
-        {isLoading && (
-          <div className="text-center mt-12 flex flex-col items-center justify-center">
-            <Spinner className="h-10 w-10 text-purple-500" />
-            <p className="mt-4 text-slate-600">{loadingMessage}</p>
-            <div className="w-full max-w-md bg-slate-200 rounded-full h-2.5 mt-4 overflow-hidden">
-                <div 
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 h-2.5 rounded-full transition-all duration-500 ease-linear" 
-                    style={{ width: `${progress}%` }}
-                ></div>
-            </div>
-          </div>
-        )}
+      <main className="container mx-auto px-4 pb-20 pt-4">
+        <div className="max-w-2xl mx-auto space-y-12">
+          <section className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl p-8 border border-white/50">
+            <ColoringBookForm onSubmit={handleGenerate} isLoading={isLoading} mode={mode} />
+          </section>
 
-        {error && (
-          <div className="text-center mt-8 max-w-xl mx-auto bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg" role="alert">
-            <strong className="font-bold">Oops! </strong>
-            <span className="block sm:inline">{error}</span>
-          </div>
-        )}
-
-        {mode === 'coloringBook' && generatedImages && (
-          <div className="mt-12">
-             <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-slate-700">Your Coloring Book is Ready!</h2>
-                {coloringBookPdfUrl && (
-                    <a
-                        href={coloringBookPdfUrl}
-                        download={`Coloring-Book-${generatedImages.name.replace(/\s+/g, '-')}.pdf`}
-                        className="mt-4 inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
-                    >
-                        Download PDF
-                    </a>
-                )}
-            </div>
-            <div className="mt-12">
-              <ImageGrid mode="coloringBook" coverImage={generatedImages.coverImage} pages={generatedImages.pages} />
-            </div>
-          </div>
-        )}
-
-        {mode === 'stickerMaker' && stickerImages && (
-          <div className="mt-12">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-slate-700">Your Stickers are Ready!</h2>
-                <div className="flex flex-wrap justify-center gap-4 mt-4">
-                  {stickerPdfUrl && (
-                      <a
-                          href={stickerPdfUrl}
-                          download="Sticker-Sheet.pdf"
-                          className="inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
-                      >
-                          Download Sticker Sheet (PDF)
-                      </a>
-                  )}
-                  <button
-                    onClick={handleDownloadZip}
-                    disabled={isZipLoading}
-                    className="inline-block bg-gradient-to-r from-purple-400 to-indigo-500 hover:from-purple-500 hover:to-indigo-600 text-white font-bold py-3 px-6 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out disabled:opacity-50"
-                  >
-                    {isZipLoading ? 'Zipping...' : 'Download All as ZIP'}
-                  </button>
+          {isLoading && (
+            <div className="flex flex-col items-center gap-4 animate-fade-in">
+              <Spinner className="w-10 h-10 text-purple-500" />
+              <div className="text-center">
+                <p className="font-medium text-slate-700">{loadingMessage}</p>
+                <div className="w-48 h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                </div>
               </div>
             </div>
-            <div className="mt-12">
+          )}
+
+          {error && (
+            <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-center font-medium animate-fade-in">
+              {error}
+            </div>
+          )}
+
+          {generatedImages && mode === 'coloringBook' && (
+            <div className="space-y-8 animate-scale-in">
+              <div className="flex justify-between items-end">
+                <h2 className="text-2xl font-bold text-slate-800">Your Book</h2>
+                {coloringBookPdfUrl && (
+                  <a href={coloringBookPdfUrl} download="My-Coloring-Book.pdf" className="px-6 py-2 bg-green-500 text-white rounded-xl font-bold shadow-lg hover:bg-green-600 transition-colors">Download PDF</a>
+                )}
+              </div>
+              <ImageGrid mode="coloringBook" coverImage={generatedImages.coverImage} pages={generatedImages.pages} />
+            </div>
+          )}
+
+          {stickerImages && mode === 'stickerMaker' && (
+            <div className="space-y-8 animate-scale-in">
+              <div className="flex flex-wrap justify-between items-end gap-4">
+                <h2 className="text-2xl font-bold text-slate-800">Your Stickers</h2>
+                <div className="flex gap-2">
+                  <button onClick={() => createStickersZip(stickerImages)} className="px-6 py-2 bg-slate-800 text-white rounded-xl font-bold shadow-lg hover:bg-slate-900 transition-colors">Save All</button>
+                  {stickerPdfUrl && <a href={stickerPdfUrl} download="Stickers.pdf" className="px-6 py-2 bg-pink-500 text-white rounded-xl font-bold shadow-lg hover:bg-pink-600 transition-colors">PDF Sheet</a>}
+                </div>
+              </div>
               <ImageGrid mode="stickerMaker" stickers={stickerImages} />
             </div>
-          </div>
-        )}
-        
-        {mode === 'storyTeller' && storybookContent && (
-          <div className="mt-12 max-w-2xl mx-auto">
-             <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-slate-700">Your Personalized Storybook is Ready!</h2>
-                 <div className="flex flex-wrap justify-center gap-4 mt-4">
-                    {storyPdfUrl && (
-                        <a
-                            href={storyPdfUrl}
-                            download={`${storybookContent.title.replace(/\s+/g, '-')}-for-${storybookContent.characters.character1Name}.pdf`}
-                            className="inline-block bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition-transform duration-300 ease-in-out"
-                        >
-                            Download Storybook PDF
-                        </a>
-                    )}
-                 </div>
+          )}
+
+          {storybookContent && mode === 'storyTeller' && (
+            <div className="space-y-8 animate-scale-in">
+              <div className="flex justify-between items-end">
+                <h2 className="text-2xl font-bold text-slate-800">Your Story</h2>
+                {storyPdfUrl && <a href={storyPdfUrl} download="Story.pdf" className="px-6 py-2 bg-blue-500 text-white rounded-xl font-bold shadow-lg hover:bg-blue-600 transition-colors">Download Book</a>}
+              </div>
+              <div className="bg-white rounded-3xl p-4 shadow-xl border border-slate-100">
+                <img src={storybookContent.coverImage} alt="Cover" className="w-full rounded-2xl shadow-sm" />
+                <h3 className="text-xl font-bold text-center mt-6 text-slate-800">{storybookContent.title}</h3>
+              </div>
             </div>
-            <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 md:p-8 border aspect-[8.5/11]">
-              <h3 className="text-xl font-bold font-sans mb-4 text-center">Storybook Cover Preview</h3>
-              <img src={storybookContent.coverImage} alt="Storybook cover preview" className="w-full h-auto rounded-lg shadow-md object-contain" />
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </main>
-      
+
       <button 
         onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 bg-gradient-to-r from-purple-500 to-pink-500 text-white p-4 rounded-full shadow-xl hover:scale-110 transform transition-transform duration-300"
-        aria-label="Open Chat"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-slate-900 text-white rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all z-40"
       >
         <ChatIcon />
       </button>
