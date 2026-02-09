@@ -1,4 +1,3 @@
-
 # AI Creative Studio
 
 > **Where Imagination Becomes Art.**
@@ -9,10 +8,10 @@ Transform your child's favorite ideas into personalized coloring books, vibrant 
 
 ## Application Interface
 
-<!-- | Book Creator | Sticker Maker | Story Teller |
+| Book Creator | Sticker Maker | Story Teller |
 | :---: | :---: | :---: |
-| ![Book Details](https://r.jina.ai/i/27c24a6e3e5b47a988d44007b8b201f9) | ![Sticker Details](https://r.jina.ai/i/5688d011681a4a44b822d5696c21e646) | ![Story Details](https://r.jina.ai/i/442fcc3b983d4632b7bc4047805206ea) |
-| *Personalized Book Forms* | *Custom Sticker Themes* | *Classic and AI Story Modes* | -->
+| ![Book Details](./images/ui-books.png) | ![Sticker Details](./images/ui-stickers.png) | ![Story Details](./images/ui-stories.png) |
+| *Personalized Book Forms* | *Custom Sticker Themes* | *Classic and AI Story Modes* |
 
 ---
 
@@ -22,11 +21,11 @@ Below is a complete 9-page preview of a personalized coloring book generated for
 
 | Page 1: Custom Cover | Page 2: Personalized Character | Page 3: Fun Scene |
 | :---: | :---: | :---: |
-| ![Page 1](https://r.jina.ai/i/05e6361a65f94b159f8a3dae20ce553e) | ![Page 2](https://r.jina.ai/i/61e868840134426591f42ed1844b2f15) | ![Page 3](https://r.jina.ai/i/8267675f928e4693994ef0f9687e14f6) |
+| ![Page 1](./images/sample-page-1.png) | ![Page 2](./images/sample-page-2.png) | ![Page 3](./images/sample-page-3.png) |
 | **Page 4: Amazing Maze** | **Page 5: Connect the Dots** | **Page 6: Find the Items** |
-| ![Page 4](https://r.jina.ai/i/549c71e98d8948278784ea386e8da431) | ![Page 5](https://r.jina.ai/i/58797f3747cb4e4785ca883832c69436) | ![Page 6](https://r.jina.ai/i/03295e5421c64dfc9e1e194856f6ce21) |
+| ![Page 4](./images/sample-page-4.png) | ![Page 5](./images/sample-page-5.png) | ![Page 6](./images/sample-page-6.png) |
 | **Page 7: Name Tracing** | **Page 8: Fun Pattern** | **Page 9: Coloring Award** |
-| ![Page 7](https://r.jina.ai/i/85050f28a7e040c598066f122ec0139b) | ![Page 8](https://r.jina.ai/i/c9d5f75e0c6a469894e7737e1a3d0ae8) | ![Page 9](https://r.jina.ai/i/9e00662d08a5482386948ca24ce9b7e7) |
+| ![Page 7](./images/sample-page-7.png) | ![Page 8](./images/sample-page-8.png) | ![Page 9](./images/sample-page-9.png) |
 
 ---
 
